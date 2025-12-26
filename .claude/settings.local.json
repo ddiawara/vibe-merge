@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.jetbrains.com)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "Bash(bun install:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "name": "git-merge-wizard",
+  "displayName": "Git Merge Wizard",
+  "description": "A powerful 3-way merge conflict resolver inspired by IntelliJ IDEA - Visual side-by-side merge editor with intuitive controls",
+  "version": "0.1.0",
+  "publisher": "your-name",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "merge",
+    "conflict",
+    "diff",
+    "3-way merge"
+  ],
+  "activationEvents": [
+    "onCommand:gitMergeWizard.openMergeEditor",
+    "onCommand:gitMergeWizard.resolveConflicts"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitMergeWizard.openMergeEditor",
+        "title": "Open Merge Editor",
+        "category": "Git Merge Wizard",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitMergeWizard.resolveConflicts",
+        "title": "Resolve All Conflicts",
+        "category": "Git Merge Wizard",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "gitMergeWizard.acceptLeft",
+        "title": "Accept Current (Left)",
+        "category": "Git Merge Wizard",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "gitMergeWizard.acceptRight",
+        "title": "Accept Incoming (Right)",
+        "category": "Git Merge Wizard",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "gitMergeWizard.acceptBoth",
+        "title": "Accept Both Changes",
+        "category": "Git Merge Wizard",
+        "icon": "$(fold)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "gitMergeWizard.openMergeEditor",
+          "when": "gitMergeWizard.hasConflicts",
+          "group": "navigation"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "gitMergeWizard.openMergeEditor",
+          "when": "scmProvider == git",
+          "group": "inline"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "gitMergeWizard.openMergeEditor",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      },
+      {
+        "command": "gitMergeWizard.acceptLeft",
+        "key": "ctrl+shift+left",
+        "mac": "cmd+shift+left",
+        "when": "gitMergeWizard.editorActive"
+      },
+      {
+        "command": "gitMergeWizard.acceptRight",
+        "key": "ctrl+shift+right",
+        "mac": "cmd+shift+right",
+        "when": "gitMergeWizard.editorActive"
+      }
+    ],
+    "configuration": {
+      "title": "Git Merge Wizard",
+      "properties": {
+        "gitMergeWizard.autoApplyNonConflicting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically apply non-conflicting changes"
+        },
+        "gitMergeWizard.showLineNumbers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show line numbers in the merge editor"
+        },
+        "gitMergeWizard.highlightSyntax": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable syntax highlighting in the merge editor"
+        },
+        "gitMergeWizard.syncScroll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Synchronize scrolling between panels"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "diff": "^5.1.0"
+  }
+}
