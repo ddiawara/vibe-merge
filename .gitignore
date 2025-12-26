@@ -6,3 +6,23 @@ node_modules
 .DS_Store
 *.log
 npm-debug.log*
+# ============================================
+# Taskfile Starter - Add to your .gitignore
+# ============================================
+# Run: cat gitignore_to_append >> .gitignore && rm gitignore_to_append
+
+# Flox environment files
+.flox/cache/
+.flox/log/
+.flox/run/
+.flox/env/manifest.lock
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

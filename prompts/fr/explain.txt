@@ -1,0 +1,14 @@
+Explique ce code de maniere claire et concise. Decris:
+
+1. Ce que fait ce code
+2. Les concepts cles utilises
+3. Le flow d'execution
+
+Fichier: __FILE__
+
+Code:
+```
+__CODE__
+```
+
+Reponds de maniere structuree avec des exemples si pertinent.

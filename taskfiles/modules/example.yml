@@ -1,0 +1,140 @@
+# taskfiles/modules/example.yml
+# Module d'exemple - a utiliser comme template
+#
+# Pour activer ce module, ajouter dans Taskfile.yml:
+#   includes:
+#     example:
+#       taskfile: ./taskfiles/modules/example.yml
+
+version: '3'
+
+includes:
+  ui:
+    taskfile: ../ui.yml
+    internal: true
+  utils:
+    taskfile: ../utils.yml
+    internal: true
+
+silent: true
+
+# Variables specifiques au module
+vars:
+  MODULE_NAME: "Example"
+
+tasks:
+  # ============================================================================
+  # MENU PAR DEFAUT
+  # ============================================================================
+
+  default:
+    desc: "Menu {{.MODULE_NAME}}"
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "{{.MODULE_NAME}}"
+          SUBTITLE: "Module d'exemple"
+          COLOR: "212"
+      - task: ui:spacer
+      - task: ui:menu-box
+        vars:
+          ICON: ""
+          TITLE: "Commandes disponibles"
+          COLOR: "51"
+          ITEMS:
+            - {cmd: install, label: Installer, hint: "installer le module"}
+            - {cmd: status, label: Statut, hint: "verifier l'etat"}
+            - {cmd: destroy, label: Supprimer, hint: "desinstaller"}
+
+  # ============================================================================
+  # INSTALLATION
+  # ============================================================================
+
+  install:
+    desc: "Installer {{.MODULE_NAME}}"
+    cmds:
+      - task: ui:header
+        vars: {TITLE: "INSTALLATION {{.MODULE_NAME | upper}}", COLOR: "51"}
+      - task: ui:spacer
+
+      # Etape 1
+      - task: ui:section
+        vars: {TITLE: "1. Preparation..."}
+      - task: ui:spin
+        vars:
+          TITLE: "Verification des prerequis..."
+          CMD: "sleep 1"
+      - task: ui:spacer
+
+      # Etape 2
+      - task: ui:section
+        vars: {TITLE: "2. Installation..."}
+      - task: ui:spin
+        vars:
+          TITLE: "Installation en cours..."
+          CMD: "sleep 2 && echo 'Installation terminee'"
+      - task: ui:spacer
+
+      # Succes
+      - task: ui:card
+        vars:
+          HEADER: "Installation terminee"
+          ICON: ""
+          CONTENT: "{{.MODULE_NAME}} est pret a utiliser"
+          COLOR: "42"
+
+  # ============================================================================
+  # STATUS
+  # ============================================================================
+
+  status:
+    desc: "Statut {{.MODULE_NAME}}"
+    cmds:
+      - task: ui:header
+        vars: {TITLE: "STATUT {{.MODULE_NAME | upper}}", COLOR: "226"}
+      - task: ui:spacer
+      - task: ui:status-box
+        vars:
+          ICON: ""
+          TITLE: "Composants"
+          COLOR: "51"
+          ITEMS:
+            - {label: "Service principal", status: ok, value: "Running"}
+            - {label: "Base de donnees", status: ok, value: "Connected"}
+            - {label: "Cache", status: warn, value: "Degraded"}
+      - task: ui:spacer
+      - task: ui:var-box
+        vars:
+          ICON: ""
+          TITLE: "Configuration"
+          COLOR: "99"
+          VARS:
+            - {key: "Version", value: "1.0.0"}
+            - {key: "Environnement", value: "development"}
+            - {key: "Derniere MAJ", value: "2024-01-15"}
+
+  # ============================================================================
+  # SUPPRESSION
+  # ============================================================================
+
+  destroy:
+    desc: "Supprimer {{.MODULE_NAME}}"
+    cmds:
+      - task: ui:header
+        vars: {TITLE: "SUPPRESSION {{.MODULE_NAME | upper}}", COLOR: "196"}
+      - task: ui:spacer
+      - task: ui:warn
+        vars: {TEXT: "Cette action va supprimer {{.MODULE_NAME}}"}
+      - task: ui:confirm
+        vars: {PROMPT: "Confirmer la suppression?"}
+      - task: ui:spacer
+
+      # Suppression
+      - task: ui:spin
+        vars:
+          TITLE: "Suppression en cours..."
+          CMD: "sleep 2"
+
+      - task: ui:spacer
+      - task: ui:success
+        vars: {TEXT: "{{.MODULE_NAME}} supprime!"}

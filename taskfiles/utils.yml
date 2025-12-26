@@ -1,0 +1,337 @@
+# taskfiles/utils.yml
+# Utilitaires generiques (sans dependance K8s/Helm)
+#
+# Pour les helpers Kubernetes/Helm, voir k8s.yml
+
+version: '3'
+
+includes:
+  ui:
+    taskfile: ./ui.yml
+    internal: true
+
+silent: true
+
+tasks:
+  # ============================================================================
+  # CHECKS (prerequisites)
+  # ============================================================================
+
+  check-tools:
+    desc: "Verifier que les outils requis sont installes"
+    internal: true
+    cmd: |
+      for cmd in gum jq curl git; do
+        command -v $cmd &>/dev/null || { gum style --foreground 196 " $cmd requis"; exit 1; }
+      done
+
+  check-jq:
+    desc: "Verifier que jq est installe"
+    internal: true
+    cmd: command -v jq &>/dev/null || { gum style --foreground 196 " jq requis (brew install jq)"; exit 1; }
+
+  check-ollama:
+    desc: "Verifier que Ollama est lance et accessible"
+    internal: true
+    vars:
+      OLLAMA_HOST: '{{.OLLAMA_HOST | default "http://localhost:11434"}}'
+    cmd: |
+      # Verifier si le port est ouvert
+      if ! lsof -ti :11434 >/dev/null 2>&1; then
+        gum style --foreground 196 " Ollama non lance (ollama serve)"
+        exit 1
+      fi
+      # Attendre que l'API soit prete (max 10s)
+      for i in $(seq 1 10); do
+        curl -s {{.OLLAMA_HOST}}/api/tags >/dev/null 2>&1 && exit 0
+        sleep 1
+      done
+      gum style --foreground 196 " Ollama API timeout"
+      exit 1
+
+  # ============================================================================
+  # NETTOYAGE
+  # ============================================================================
+
+  clean:
+    desc: "Nettoyer les fichiers generes"
+    cmds:
+      - task: ui:card
+        vars:
+          HEADER: "Nettoyage"
+          ICON: "󰃢"
+          CONTENT: "Suppression des fichiers generes..."
+          COLOR: "214"
+      - |
+        find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+        find . -type f -name "*.pyc" -delete 2>/dev/null || true
+        find . -type f -name "*.pyo" -delete 2>/dev/null || true
+        find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+        find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+        find . -type d -name "node_modules" -exec rm -rf {} + 2>/dev/null || true
+        find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
+        find . -type d -name ".next" -exec rm -rf {} + 2>/dev/null || true
+        find . -type d -name "coverage" -exec rm -rf {} + 2>/dev/null || true
+      - task: ui:success
+        vars: {TEXT: "Nettoyage termine"}
+
+  clean-docker:
+    desc: "Nettoyer les ressources Docker inutilisees"
+    cmds:
+      - task: ui:card
+        vars:
+          HEADER: "Docker Cleanup"
+          ICON: ""
+          CONTENT: "Suppression des ressources non utilisees"
+          COLOR: "214"
+      - task: ui:confirm
+        vars: {PROMPT: "Supprimer les images/containers non utilises?"}
+      - docker system prune -f
+      - task: ui:success
+        vars: {TEXT: "Docker nettoye"}
+
+  # ============================================================================
+  # DOCKER HELPERS
+  # ============================================================================
+
+  docker-ensure-container:
+    desc: "S'assurer qu'un container Docker existe et tourne"
+    internal: true
+    vars:
+      NAME: '{{.NAME}}'
+      IMAGE: '{{.IMAGE}}'
+      PORTS: '{{.PORTS | default ""}}'
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default ""}}'
+    cmd: |
+      CONTAINER_EXISTS=$(docker ps -a --format '{{`{{.Names}}`}}' | grep -q "^{{.NAME}}$" && echo "yes" || echo "no")
+      CONTAINER_RUNNING=$(docker ps --format '{{`{{.Names}}`}}' | grep -q "^{{.NAME}}$" && echo "yes" || echo "no")
+      if [ "$CONTAINER_EXISTS" = "yes" ]; then
+        if [ "$CONTAINER_RUNNING" = "yes" ]; then
+          gum style --foreground 42 " Container {{.NAME}} deja actif"
+        else
+          gum style --foreground 226 "  Container {{.NAME}} arrete, demarrage..."
+          docker start {{.NAME}}
+          gum style --foreground 42 " Container {{.NAME}} demarre"
+        fi
+      else
+        gum style --foreground 51 " Creation du container {{.NAME}}..."
+        PORTS_FLAG=""
+        if [ -n "{{.PORTS}}" ]; then
+          PORTS_FLAG="-p {{.PORTS}}"
+        fi
+        gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ docker run -d $PORTS_FLAG --name {{.NAME}} --restart=always {{.EXTRA_ARGS}} {{.IMAGE}}"
+        docker run -d $PORTS_FLAG --name {{.NAME}} --restart=always {{.EXTRA_ARGS}} {{.IMAGE}}
+        gum style --foreground 42 " Container {{.NAME}} cree"
+      fi
+
+  docker-stop:
+    desc: "Arreter un container Docker"
+    internal: true
+    vars:
+      NAME: '{{.NAME}}'
+    cmd: |
+      CONTAINER_RUNNING=$(docker ps --format '{{`{{.Names}}`}}' | grep -q "^{{.NAME}}$" && echo "yes" || echo "no")
+      if [ "$CONTAINER_RUNNING" = "yes" ]; then
+        gum style --foreground 51 "  Arret du container {{.NAME}}..."
+        docker stop {{.NAME}}
+        gum style --foreground 42 " Container {{.NAME}} arrete"
+      else
+        gum style --foreground 240 "Container {{.NAME}} deja arrete"
+      fi
+
+  docker-remove:
+    desc: "Supprimer un container Docker"
+    internal: true
+    vars:
+      NAME: '{{.NAME}}'
+    cmd: |
+      CONTAINER_EXISTS=$(docker ps -a --format '{{`{{.Names}}`}}' | grep -q "^{{.NAME}}$" && echo "yes" || echo "no")
+      if [ "$CONTAINER_EXISTS" = "yes" ]; then
+        gum style --foreground 51 "󰩺  Suppression du container {{.NAME}}..."
+        docker rm -f {{.NAME}} >/dev/null 2>&1
+        gum style --foreground 42 " Container {{.NAME}} supprime"
+      else
+        gum style --foreground 240 "Container {{.NAME}} n'existe pas"
+      fi
+
+  # ============================================================================
+  # FILE & VALIDATION HELPERS
+  # ============================================================================
+
+  skip-if-installed:
+    desc: "Afficher 'deja installe' et exit 0 si la commande reussit"
+    internal: true
+    vars:
+      CHECK_CMD: '{{.CHECK_CMD}}'
+      NAME: '{{.NAME}}'
+    cmd: |
+      if {{.CHECK_CMD}} &>/dev/null; then
+        gum style --foreground 42 " {{.NAME}} deja installe"
+        exit 0
+      fi
+      exit 1
+
+  require-file:
+    desc: "Verifier qu'un fichier existe, warning + exit 1 si absent"
+    internal: true
+    vars:
+      FILE: '{{.FILE}}'
+      NAME: '{{.NAME | default "Fichier"}}'
+    cmd: |
+      FILE_EXISTS=$(test -f "{{.FILE}}" && echo "yes" || echo "no")
+      if [ "$FILE_EXISTS" = "no" ]; then
+        gum style --foreground 226 " {{.NAME}} non trouve: {{.FILE}}"
+        exit 1
+      fi
+
+  require-dir:
+    desc: "Verifier qu'un repertoire existe, warning + exit 1 si absent"
+    internal: true
+    vars:
+      DIR: '{{.DIR}}'
+      NAME: '{{.NAME | default "Repertoire"}}'
+    cmd: |
+      DIR_EXISTS=$(test -d "{{.DIR}}" && echo "yes" || echo "no")
+      if [ "$DIR_EXISTS" = "no" ]; then
+        gum style --foreground 226 " {{.NAME}} non trouve: {{.DIR}}"
+        exit 1
+      fi
+
+  # ============================================================================
+  # OLLAMA / IA HELPERS
+  # ============================================================================
+
+  ollama-call:
+    desc: "Appeler Ollama avec substitution de variables"
+    internal: true
+    vars:
+      # Source du prompt (priorite: PROMPT_NAME > PROMPT_FILE > PROMPT)
+      PROMPT_NAME: '{{.PROMPT_NAME | default ""}}'    # Nom du prompt (ex: "commit", "pr", "swift/generate")
+      PROMPT_FILE: '{{.PROMPT_FILE | default ""}}'    # Chemin fichier (legacy)
+      PROMPT: '{{.PROMPT | default ""}}'              # Prompt inline (legacy)
+      # Configuration Ollama
+      MODEL: '{{.MODEL | default "qwen2.5-coder:14b"}}'
+      TIMEOUT: '{{.TIMEOUT | default "120"}}'
+      HOST: '{{.HOST | default "http://localhost:11434"}}'
+      # Variables de substitution
+      VAR_COMMITS: '{{.VAR_COMMITS | default ""}}'
+      VAR_FILES: '{{.VAR_FILES | default ""}}'
+      VAR_DIFF: '{{.VAR_DIFF | default ""}}'
+      VAR_STATS: '{{.VAR_STATS | default ""}}'
+      VAR_CODE: '{{.VAR_CODE | default ""}}'
+      VAR_FILE: '{{.VAR_FILE | default ""}}'
+      VAR_FRAMEWORK: '{{.VAR_FRAMEWORK | default ""}}'
+      VAR_SCOPE: '{{.VAR_SCOPE | default ""}}'
+      VAR_RECENT_COMMITS: '{{.VAR_RECENT_COMMITS | default ""}}'
+      VAR_TYPE: '{{.VAR_TYPE | default ""}}'
+      VAR_DESC: '{{.VAR_DESC | default ""}}'
+      VAR_PROJECT: '{{.VAR_PROJECT | default ""}}'
+      VAR_FILE_CONTENTS: '{{.VAR_FILE_CONTENTS | default ""}}'
+      # Options Ollama
+      TEMPERATURE: '{{.TEMPERATURE | default ""}}'
+      NUM_PREDICT: '{{.NUM_PREDICT | default ""}}'
+    cmd: |
+      # Configuration
+      export AI_LANG="${AI_LANG:-fr}"
+      export PROMPTS_DIR="{{.ROOT_DIR}}/prompts"
+
+      # 1. Charger le prompt (PROMPT_NAME > PROMPT_FILE > PROMPT)
+      TEMPLATE=""
+
+      if [ -n "{{.PROMPT_NAME}}" ]; then
+        # Nouvelle methode: charger depuis prompts/{lang}/ ou prompts/{module}/
+        PROMPT_NAME="{{.PROMPT_NAME}}"
+
+        if [[ "$PROMPT_NAME" == */* ]]; then
+          # Prompt module (ex: swift/generate)
+          PROMPT_PATH="${PROMPTS_DIR}/${PROMPT_NAME}.txt"
+        else
+          # Prompt avec support langue
+          PROMPT_PATH="${PROMPTS_DIR}/${AI_LANG}/${PROMPT_NAME}.txt"
+          # Fallback vers anglais
+          [ ! -f "$PROMPT_PATH" ] && PROMPT_PATH="${PROMPTS_DIR}/en/${PROMPT_NAME}.txt"
+        fi
+
+        if [ -f "$PROMPT_PATH" ]; then
+          TEMPLATE=$(cat "$PROMPT_PATH")
+        else
+          echo "ERREUR: Prompt non trouve: $PROMPT_PATH" >&2
+          exit 1
+        fi
+      elif [ -n "{{.PROMPT_FILE}}" ] && [ -f "{{.PROMPT_FILE}}" ]; then
+        # Legacy: fichier direct
+        TEMPLATE=$(cat "{{.PROMPT_FILE}}")
+      else
+        # Legacy: prompt inline
+        TEMPLATE="{{.PROMPT}}"
+      fi
+
+      # 2. Construire JSON avec substitutions via jq
+      JSON=$(jq -n \
+        --arg model "{{.MODEL}}" \
+        --arg template "$TEMPLATE" \
+        --arg commits "{{.VAR_COMMITS}}" \
+        --arg files "{{.VAR_FILES}}" \
+        --arg diff "{{.VAR_DIFF}}" \
+        --arg stats "{{.VAR_STATS}}" \
+        --arg code "{{.VAR_CODE}}" \
+        --arg file "{{.VAR_FILE}}" \
+        --arg framework "{{.VAR_FRAMEWORK}}" \
+        --arg scope "{{.VAR_SCOPE}}" \
+        --arg recent "{{.VAR_RECENT_COMMITS}}" \
+        --arg type "{{.VAR_TYPE}}" \
+        --arg desc "{{.VAR_DESC}}" \
+        --arg project "{{.VAR_PROJECT}}" \
+        --arg contents "{{.VAR_FILE_CONTENTS}}" \
+        --arg temp "{{.TEMPERATURE}}" \
+        --arg num "{{.NUM_PREDICT}}" \
+        '{
+          model: $model,
+          prompt: ($template
+            | gsub("__COMMITS__"; $commits)
+            | gsub("__FILES__"; $files)
+            | gsub("__DIFF__"; $diff)
+            | gsub("__STATS__"; $stats)
+            | gsub("__CODE__"; $code)
+            | gsub("__FILE__"; $file)
+            | gsub("__FRAMEWORK__"; $framework)
+            | gsub("__SCOPE__"; $scope)
+            | gsub("__RECENT_COMMITS__"; $recent)
+            | gsub("__TYPE__"; $type)
+            | gsub("__DESC__"; $desc)
+            | gsub("__PROJECT__"; $project)
+            | gsub("__FILE_CONTENTS__"; $contents)),
+          stream: false
+        } + (if $temp != "" then {options: {temperature: ($temp | tonumber)}} else {} end)
+          + (if $num != "" then {options: (.options // {} | . + {num_predict: ($num | tonumber)})} else {} end)')
+
+      # 3. Appeler Ollama et retourner la reponse
+      curl -s --connect-timeout 10 -m {{.TIMEOUT}} {{.HOST}}/api/generate \
+        -H "Content-Type: application/json" \
+        -d "$JSON" | jq -r '.response // empty'
+
+  # ============================================================================
+  # GIT HELPERS
+  # ============================================================================
+
+  git-current-branch:
+    desc: "Retourne le nom de la branche courante"
+    internal: true
+    cmd: git branch --show-current
+
+  git-is-clean:
+    desc: "Verifie si le repo est propre (pas de changements)"
+    internal: true
+    cmd: |
+      if [ -z "$(git status --porcelain)" ]; then
+        echo "yes"
+      else
+        echo "no"
+      fi
+
+  git-has-remote:
+    desc: "Verifie si un remote existe"
+    internal: true
+    vars:
+      REMOTE: '{{.REMOTE | default "origin"}}'
+    cmd: git remote | grep -q "^{{.REMOTE}}$" && echo "yes" || echo "no"

@@ -1,0 +1,14 @@
+Explain this code clearly and concisely. Describe:
+
+1. What this code does
+2. Key concepts used
+3. Execution flow
+
+File: __FILE__
+
+Code:
+```
+__CODE__
+```
+
+Respond in a structured way with examples if relevant.

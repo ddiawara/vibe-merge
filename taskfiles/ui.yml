@@ -1,0 +1,811 @@
+# taskfiles/ui.yml
+# Composants UI réutilisables avec gum
+# Usage: task ui:header TITLE="Mon titre" COLOR=212
+#
+# Ce fichier est marqué internal: true dans l'include principal
+# Les tâches n'apparaissent pas dans `task --list`
+
+version: '3'
+
+silent: true
+
+# NOTE: Utilisation des icônes Nerd Fonts pour éviter les bugs de largeur Unicode
+# Les emojis Unicode ont une largeur variable qui cause des glitches dans gum/lipgloss
+# Les icônes Nerd Fonts ont une largeur fixe de 1 cell
+# Référence: https://www.nerdfonts.com/cheat-sheet
+#
+# Icônes utilisées:
+#   󰒋  nf-md-cog          (config)
+#     nf-fa-check        (success)
+#     nf-fa-times        (error)
+#     nf-fa-warning      (warning)
+#     nf-fa-info_circle  (info)
+#   󰈙  nf-md-file_document (menu)
+#   󰔧  nf-md-wrench       (tools)
+#   󱒕  nf-md-chart_box    (status)
+
+vars:
+  # Largeur automatique du terminal (avec marge de 4 caractères)
+  UI_WIDTH:
+    sh: "echo $(($(tput cols 2>/dev/null || echo 80) - 4))"
+
+tasks:
+  # ============================================================================
+  # HEADERS & BANNERS
+  # ============================================================================
+
+  header:
+    desc: "Affiche une bannière avec bordure"
+    requires:
+      vars: [TITLE]
+    vars:
+      COLOR: '{{.COLOR | default .UI_COLOR_PRIMARY | default "212"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      BORDER: '{{.BORDER | default "double"}}'
+    cmd: |
+      gum style \
+        --foreground {{.COLOR}} --border-foreground {{.COLOR}} --border {{.BORDER}} \
+        --align center --width {{.WIDTH}} --margin "1 2" --padding "2 4" \
+        '{{.TITLE}}'
+
+  header-sub:
+    desc: "Affiche une bannière avec sous-titre"
+    requires:
+      vars: [TITLE, SUBTITLE]
+    vars:
+      COLOR: '{{.COLOR | default .UI_COLOR_PRIMARY | default "212"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+    cmd: |
+      gum style \
+        --foreground {{.COLOR}} --border-foreground {{.COLOR}} --border double \
+        --align center --width {{.WIDTH}} --margin "1 2" --padding "2 4" \
+        '{{.TITLE}}' '' '{{.SUBTITLE}}'
+
+  section:
+    desc: "Affiche un titre de section"
+    requires:
+      vars: [TITLE]
+    vars:
+      COLOR: '{{.COLOR | default "51"}}'
+    cmd: |
+      echo ""
+      gum style --foreground {{.COLOR}} --bold "{{.TITLE}}"
+
+  # ============================================================================
+  # STATUS MESSAGES
+  # ============================================================================
+
+  success:
+    desc: "Message de succès (vert)"
+    requires:
+      vars: [TEXT]
+    cmd: gum style --foreground 42 " {{.TEXT}}"
+
+  error:
+    desc: "Message d'erreur (rouge)"
+    requires:
+      vars: [TEXT]
+    cmd: gum style --foreground 196 " {{.TEXT}}"
+
+  warn:
+    desc: "Message d'avertissement (jaune)"
+    requires:
+      vars: [TEXT]
+    cmd: gum style --foreground 226 " {{.TEXT}}"
+
+  info:
+    desc: "Message d'information"
+    requires:
+      vars: [TEXT]
+    vars:
+      COLOR: '{{.COLOR | default "51"}}'
+    cmd: gum style --foreground {{.COLOR}} "{{.TEXT}}"
+
+  muted:
+    desc: "Message discret (grisé)"
+    requires:
+      vars: [TEXT]
+    cmd: gum style --foreground 240 "{{.TEXT}}"
+
+  # ============================================================================
+  # SPINNERS & LOADING
+  # ============================================================================
+
+  spin:
+    desc: "Spinner pendant une commande (spinners: dot, line, minidot, jump, pulse, points, globe, moon, monkey, meter, hamburger)"
+    requires:
+      vars: [TITLE, CMD]
+    vars:
+      SPINNER: '{{.SPINNER | default "dot"}}'
+      SHOW_OUTPUT: '{{.SHOW_OUTPUT | default "false"}}'
+    cmd: |
+      if [ "{{.SHOW_OUTPUT}}" = "true" ]; then
+        gum spin --spinner {{.SPINNER}} --title "{{.TITLE}}" --show-output -- bash -c '{{.CMD}}'
+      else
+        gum spin --spinner {{.SPINNER}} --title "{{.TITLE}}" -- bash -c '{{.CMD}}'
+      fi
+      EXIT_CODE=$?
+      if [ $EXIT_CODE -ne 0 ]; then
+        gum style --foreground 196 " Commande echouee (exit code: $EXIT_CODE)"
+        exit $EXIT_CODE
+      fi
+
+  # ============================================================================
+  # VERIFICATION & CHECKS
+  # ============================================================================
+
+  check-cmd:
+    desc: "Vérifie si une commande est disponible"
+    requires:
+      vars: [CMD, NAME]
+    cmd: |
+      if command -v {{.CMD}} &> /dev/null; then
+        VERSION=$({{.CMD}} --version 2>/dev/null | head -1 | sed 's/.*version //' | cut -d' ' -f1 || echo "installed")
+        gum style --foreground 42 " {{.NAME}}: $VERSION"
+      else
+        gum style --foreground 196 " {{.NAME}}: non trouvé"
+        exit 1
+      fi
+
+  check-cmd-optional:
+    desc: "Vérifie une commande optionnelle (ne fail pas)"
+    requires:
+      vars: [CMD, NAME]
+    cmd: |
+      if command -v {{.CMD}} &> /dev/null; then
+        VERSION=$({{.CMD}} --version 2>/dev/null | head -1 | sed 's/.*version //' | cut -d' ' -f1 || echo "installed")
+        gum style --foreground 42 " {{.NAME}}: $VERSION"
+      else
+        gum style --foreground 226 " {{.NAME}}: non trouvé (optionnel)"
+      fi
+
+  # ============================================================================
+  # INTERACTIVE
+  # ============================================================================
+
+  confirm:
+    desc: "Demande confirmation (avec options personnalisables)"
+    requires:
+      vars: [PROMPT]
+    vars:
+      DEFAULT: '{{.DEFAULT | default "true"}}'
+      YES: '{{.YES | default "Oui"}}'
+      NO: '{{.NO | default "Non"}}'
+    cmd: |
+      gum confirm "{{.PROMPT}}" --default={{.DEFAULT}} --affirmative="{{.YES}}" --negative="{{.NO}}"
+
+  choose:
+    desc: "Menu de sélection (simple ou multiple avec LIMIT)"
+    requires:
+      vars: [OPTIONS]
+    vars:
+      PROMPT: '{{.PROMPT | default ""}}'
+      LIMIT: '{{.LIMIT | default "1"}}'
+      HEIGHT: '{{.HEIGHT | default "10"}}'
+      CURSOR: '{{.CURSOR | default "> "}}'
+    cmd: |
+      if [ -n "{{.PROMPT}}" ]; then
+        gum style --foreground 51 "{{.PROMPT}}"
+      fi
+      echo '{{.OPTIONS}}' | tr ',' '\n' | gum choose --limit={{.LIMIT}} --height={{.HEIGHT}} --cursor="{{.CURSOR}}"
+
+  input:
+    desc: "Saisie utilisateur (supporte mode password)"
+    vars:
+      PLACEHOLDER: '{{.PLACEHOLDER | default "Entrez une valeur..."}}'
+      DEFAULT: '{{.DEFAULT | default ""}}'
+      PROMPT: '{{.PROMPT | default ""}}'
+      PASSWORD: '{{.PASSWORD | default "false"}}'
+      WIDTH: '{{.WIDTH | default "40"}}'
+    cmd: |
+      if [ -n "{{.PROMPT}}" ]; then
+        gum style --foreground 51 "{{.PROMPT}}"
+      fi
+      if [ "{{.PASSWORD}}" = "true" ]; then
+        gum input --placeholder "{{.PLACEHOLDER}}" --value "{{.DEFAULT}}" --width {{.WIDTH}} --password
+      else
+        gum input --placeholder "{{.PLACEHOLDER}}" --value "{{.DEFAULT}}" --width {{.WIDTH}}
+      fi
+
+  filter:
+    desc: "Filtrage fuzzy dans une liste (recherche interactive)"
+    requires:
+      vars: [OPTIONS]
+    vars:
+      LIMIT: '{{.LIMIT | default "1"}}'
+      HEADER: '{{.HEADER | default ""}}'
+      PLACEHOLDER: '{{.PLACEHOLDER | default "Rechercher..."}}'
+      HEIGHT: '{{.HEIGHT | default "10"}}'
+    cmd: |
+      HEADER_FLAG=""
+      if [ -n "{{.HEADER}}" ]; then
+        HEADER_FLAG="--header \"{{.HEADER}}\""
+      fi
+      echo '{{.OPTIONS}}' | tr ',' '\n' | gum filter \
+        --limit {{.LIMIT}} \
+        --placeholder "{{.PLACEHOLDER}}" \
+        --height {{.HEIGHT}} \
+        $HEADER_FLAG
+
+  write:
+    desc: "Saisie de texte multi-lignes (Ctrl+D pour terminer)"
+    vars:
+      PLACEHOLDER: '{{.PLACEHOLDER | default "Entrez votre texte..."}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      HEIGHT: '{{.HEIGHT | default "5"}}'
+      HEADER: '{{.HEADER | default ""}}'
+    cmd: |
+      if [ -n "{{.HEADER}}" ]; then
+        gum style --foreground 51 "{{.HEADER}}"
+      fi
+      gum write --placeholder "{{.PLACEHOLDER}}" --width {{.WIDTH}} --height {{.HEIGHT}}
+
+  file:
+    desc: "Sélecteur de fichier interactif"
+    vars:
+      PATH: '{{.PATH | default "."}}'
+      HEIGHT: '{{.HEIGHT | default "10"}}'
+      ALL: '{{.ALL | default "false"}}'
+    cmd: |
+      if [ "{{.ALL}}" = "true" ]; then
+        gum file {{.PATH}} --height {{.HEIGHT}} --all
+      else
+        gum file {{.PATH}} --height {{.HEIGHT}}
+      fi
+
+  pager:
+    desc: "Afficher du texte long avec pagination (scroll)"
+    requires:
+      vars: [FILE]
+    cmd: |
+      if [ -f "{{.FILE}}" ]; then
+        gum pager < "{{.FILE}}"
+      else
+        echo "{{.FILE}}" | gum pager
+      fi
+
+  format:
+    desc: "Formater du texte (markdown, code, emoji, template)"
+    requires:
+      vars: [TEXT]
+    vars:
+      TYPE: '{{.TYPE | default "markdown"}}'
+    cmd: |
+      echo '{{.TEXT}}' | gum format -t {{.TYPE}}
+
+  # ============================================================================
+  # DATA DISPLAY
+  # ============================================================================
+
+  table:
+    desc: "Affiche des données en tableau"
+    requires:
+      vars: [HEADER, ROWS]
+    vars:
+      BORDER_COLOR: '{{.BORDER_COLOR | default "212"}}'
+    cmd: |
+      {
+        echo "{{.HEADER}}"
+        echo "{{.ROWS}}"
+      } | gum table --print --border rounded --border.foreground {{.BORDER_COLOR}} | sed 's/^/  /'
+
+  log:
+    desc: "Log formaté avec niveau (supporte structured et timestamp)"
+    requires:
+      vars: [TEXT]
+    vars:
+      LEVEL: '{{.LEVEL | default "info"}}'
+      STRUCTURED: '{{.STRUCTURED | default "false"}}'
+      TIME: '{{.TIME | default ""}}'
+    cmd: |
+      LEVEL_LOWER=$(echo "{{.LEVEL}}" | tr '[:upper:]' '[:lower:]')
+      EXTRA_FLAGS=""
+      if [ "{{.STRUCTURED}}" = "true" ]; then
+        EXTRA_FLAGS="$EXTRA_FLAGS --structured"
+      fi
+      if [ -n "{{.TIME}}" ]; then
+        EXTRA_FLAGS="$EXTRA_FLAGS --time {{.TIME}}"
+      fi
+      gum log --level $LEVEL_LOWER $EXTRA_FLAGS "{{.TEXT}}"
+
+  # ============================================================================
+  # COMMAND EXECUTION
+  # ============================================================================
+
+  cmd:
+    desc: "Affiche et execute une commande (style box)"
+    requires:
+      vars: [CMD]
+    cmd: |
+      gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ {{.CMD}}"
+      bash -c '{{.CMD}}'
+      EXIT_CODE=$?
+      if [ $EXIT_CODE -ne 0 ]; then
+        gum style --foreground 196 "  ↳ Erreur (exit code: $EXIT_CODE)"
+        exit $EXIT_CODE
+      fi
+
+  # ============================================================================
+  # UTILITIES
+  # ============================================================================
+
+  hr:
+    desc: "Ligne horizontale"
+    vars:
+      WIDTH: '{{.WIDTH | default "60"}}'
+      COLOR: '{{.COLOR | default "240"}}'
+    cmd: |
+      LINE=""
+      for i in $(seq 1 {{.WIDTH}}); do LINE="${LINE}─"; done
+      gum style --foreground {{.COLOR}} "$LINE"
+
+  spacer:
+    desc: "Espace vertical"
+    cmd: echo ""
+
+  box:
+    desc: "Texte dans une boîte"
+    requires:
+      vars: [TEXT]
+    vars:
+      COLOR: '{{.COLOR | default "99"}}'
+      BORDER: '{{.BORDER | default "rounded"}}'
+    cmd: |
+      gum style \
+        --foreground {{.COLOR}} --border-foreground {{.COLOR}} --border {{.BORDER}} \
+        --padding "1 2" --margin "1 2" \
+        '{{.TEXT}}'
+
+  resources:
+    desc: "Affiche les ressources systeme (memoire, disque)"
+    cmd: |
+      # Memoire (compatible macOS et Linux)
+      OS=$(uname -s)
+      if [ "$OS" = "Darwin" ]; then
+        # macOS
+        MEM_TOTAL=$(sysctl -n hw.memsize | awk '{printf "%.0f", $1/1024/1024/1024}')
+        MEM_USED=$(vm_stat | awk '/Pages active/ {gsub(/\./,"",$3); active=$3} /Pages wired/ {gsub(/\./,"",$4); wired=$4} END {printf "%.1f", (active+wired)*4096/1024/1024/1024}')
+        gum style --foreground 212 "RAM: ${MEM_USED}G used / ${MEM_TOTAL}G total"
+      elif command -v free > /dev/null 2>&1; then
+        # Linux avec free
+        MEM_LINE=$(free -h | grep Mem | awk '{print $3" used / "$2" total"}')
+        gum style --foreground 212 "RAM: $MEM_LINE"
+      else
+        gum style --foreground 240 "RAM: (unable to detect)"
+      fi
+
+      # Disque
+      DISK_INFO=$(df -h . | tail -1 | awk '{print $3" used / "$2" total ("$5" used)"}')
+      gum style --foreground 212 "Disk: $DISK_INFO"
+
+  # ============================================================================
+  # LAYOUTS
+  # ============================================================================
+
+  join:
+    desc: "Combiner des éléments stylés (horizontal ou vertical)"
+    vars:
+      VERTICAL: '{{.VERTICAL | default "false"}}'
+      ALIGN: '{{.ALIGN | default "center"}}'
+    cmd: |
+      # Usage: echo -e "element1\nelement2" | task ui:join
+      # Ou passer des éléments stylés via ITEMS
+      if [ "{{.VERTICAL}}" = "true" ]; then
+        gum join --vertical --align {{.ALIGN}}
+      else
+        gum join --horizontal --align {{.ALIGN}}
+      fi
+
+  # ============================================================================
+  # SERVICE HELPERS
+  # ============================================================================
+
+  check-pid:
+    desc: "Vérifie si un processus est actif via son PID file"
+    requires:
+      vars: [PID_FILE]
+    cmd: |
+      if [ -f "{{.PID_FILE}}" ]; then
+        PID=$(cat "{{.PID_FILE}}")
+        if ps -p $PID > /dev/null 2>&1; then
+          echo "active:$PID"
+        else
+          rm -f "{{.PID_FILE}}"
+          echo "dead"
+        fi
+      else
+        echo "missing"
+      fi
+
+  discover-ip:
+    desc: "Découvre l'IP de la VM par ping scan"
+    cmd: |
+      for ip in $(seq {{.VM_IP_START}} {{.VM_IP_END}}); do
+        if ping -c 1 -W 1 {{.VM_NETWORK}}.$ip &>/dev/null; then
+          echo "{{.VM_NETWORK}}.$ip" > {{.TEMP_VM_IP}}
+          echo "{{.VM_NETWORK}}.$ip"
+          exit 0
+        fi
+      done
+      exit 1
+
+  status-line:
+    desc: "Affiche une ligne de statut formatée"
+    requires:
+      vars: [STATUS, MESSAGE]
+    cmd: |
+      case "{{.STATUS}}" in
+        ok)      gum style --foreground 42 "   {{.MESSAGE}}" ;;
+        warn)    gum style --foreground 226 "   {{.MESSAGE}}" ;;
+        error)   gum style --foreground 196 "   {{.MESSAGE}}" ;;
+        *)       gum style --foreground 51 "   {{.MESSAGE}}" ;;
+      esac
+
+  status-header:
+    desc: "Affiche un header de section statut"
+    requires:
+      vars: [ICON, TITLE]
+    cmd: gum style --foreground 51 --bold "{{.ICON}} {{.TITLE}}:"
+
+  # ============================================================================
+  # SHOWCASE
+  # ============================================================================
+
+  showcase:
+    desc: "Affiche tous les composants UI disponibles"
+    cmds:
+      - clear
+      - task: banner
+        vars:
+          TITLE: " UI Components Showcase"
+          SUBTITLE: "Tous les helpers disponibles dans ui.yml"
+          COLOR: "212"
+
+      # Section Headers & Banners
+      - task: divider
+        vars: {TEXT: "HEADERS & BANNERS", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: header
+        vars: {TITLE: "ui:header - Bannière simple", COLOR: "99", WIDTH: "60"}
+      - task: header-sub
+        vars: {TITLE: "ui:header-sub", SUBTITLE: "Avec sous-titre", COLOR: "51", WIDTH: "60"}
+      - task: section
+        vars: {TITLE: " ui:section - Titre de section"}
+
+      # Section Status Messages
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "STATUS MESSAGES", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: success
+        vars: {TEXT: "ui:success - Message de succès"}
+      - task: error
+        vars: {TEXT: "ui:error - Message d'erreur"}
+      - task: warn
+        vars: {TEXT: "ui:warn - Message d'avertissement"}
+      - task: info
+        vars: {TEXT: "ui:info - Message d'information"}
+      - task: muted
+        vars: {TEXT: "ui:muted - Message discret (grisé)"}
+
+      # Section Boxes
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "BOXES & CARDS", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: box
+        vars: {TEXT: "ui:box - Texte dans une boîte simple", COLOR: "99"}
+      - task: card
+        vars:
+          HEADER: "ui:card - Carte avec header"
+          ICON: ""
+          CONTENT: "Contenu de la carte avec header coloré"
+          COLOR: "212"
+
+      # Section Menu & Var Boxes
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "MENU & DATA BOXES", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: menu-box
+        vars:
+          ICON: ""
+          TITLE: "ui:menu-box - Menu avec commandes"
+          COLOR: "51"
+          ITEMS:
+            - {cmd: start, label: Démarrer, hint: "lance le service"}
+            - {cmd: stop, label: Arrêter, hint: "stoppe le service"}
+            - {cmd: status, label: Statut, hint: "affiche l'état"}
+      - task: spacer
+      - task: var-box
+        vars:
+          ICON: ""
+          TITLE: "ui:var-box - Variables"
+          COLOR: "99"
+          VARS:
+            - {key: "Nom", value: "nixos-claude"}
+            - {key: "RAM", value: "16G"}
+            - {key: "CPUs", value: "8"}
+      - task: spacer
+      - task: status-box
+        vars:
+          ICON: ""
+          TITLE: "ui:status-box - Statuts avec icônes"
+          COLOR: "51"
+          ITEMS:
+            - {label: "Service A", status: ok, value: "Running"}
+            - {label: "Service B", status: warn, value: "Degraded"}
+            - {label: "Service C", status: error, value: "Stopped"}
+            - {label: "Service D", status: info, value: "Unknown"}
+
+      # Section Inline Elements
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "INLINE ELEMENTS", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: kv
+        vars: {KEY: "ui:kv", VALUE: "Clé:Valeur inline"}
+      - task: spacer
+      - |
+        echo -n "  ui:badge → "
+        gum style --foreground 0 --background 42 --bold --padding "0 1" " OK "
+        echo -n " "
+        gum style --foreground 0 --background 226 --bold --padding "0 1" " WARN "
+        echo -n " "
+        gum style --foreground 0 --background 196 --bold --padding "0 1" " ERROR "
+        echo ""
+      - task: spacer
+      - task: progress
+        vars: {PERCENT: "75", LABEL: "  ui:progress", WIDTH: "30", COLOR: "42"}
+      - task: progress
+        vars: {PERCENT: "45", LABEL: "  ui:progress", WIDTH: "30", COLOR: "226"}
+      - task: progress
+        vars: {PERCENT: "15", LABEL: "  ui:progress", WIDTH: "30", COLOR: "196"}
+
+      # Section Utilities
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "UTILITIES", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - |
+        echo "  ui:hr →"
+      - task: hr
+        vars: {WIDTH: "50", COLOR: "240"}
+      - task: spacer
+      - |
+        echo "  ui:divider (avec texte) →"
+      - task: divider
+        vars: {TEXT: "SECTION", WIDTH: "50", COLOR: "99"}
+
+      # Section Interactive (info only)
+      - task: spacer
+      - task: divider
+        vars: {TEXT: "INTERACTIVE (non démo)", COLOR: "212", WIDTH: "70"}
+      - task: spacer
+      - task: muted
+        vars: {TEXT: "  ui:confirm   - Demande confirmation (Oui/Non)"}
+      - task: muted
+        vars: {TEXT: "  ui:choose    - Menu de sélection"}
+      - task: muted
+        vars: {TEXT: "  ui:input     - Saisie utilisateur"}
+      - task: muted
+        vars: {TEXT: "  ui:filter    - Filtrage fuzzy"}
+      - task: muted
+        vars: {TEXT: "  ui:write     - Saisie multi-lignes"}
+      - task: muted
+        vars: {TEXT: "  ui:file      - Sélecteur de fichier"}
+      - task: muted
+        vars: {TEXT: "  ui:spin      - Spinner pendant commande"}
+
+      # Footer
+      - task: spacer
+      - task: hr
+        vars: {WIDTH: "70", COLOR: "212"}
+      - |
+        gum style --foreground 240 --margin "0 2" " Usage: task ui:<component> PARAM=value"
+
+  # ============================================================================
+  # MENU HELPERS
+  # ============================================================================
+
+  menu-box:
+    desc: "Affiche un menu avec titre et items formatés"
+    requires:
+      vars: [TITLE, ITEMS]
+    vars:
+      ICON: '{{.ICON | default ""}}'
+      COLOR: '{{.COLOR | default .UI_COLOR_PRIMARY | default "212"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      CMD_WIDTH: '{{.CMD_WIDTH | default "12"}}'
+      CMD_COLOR: '{{.CMD_COLOR | default .UI_COLOR_SUCCESS | default "42"}}'
+    cmd: |
+      # Générer les lignes formatées
+      LINES=""
+      {{- range .ITEMS}}
+      CMD_PADDED=$(printf "%-{{$.CMD_WIDTH}}s" "{{.cmd}}")
+      LINE="$(gum style --foreground {{$.CMD_COLOR}} "  $CMD_PADDED")$(gum style --foreground 255 "  {{.label}} ")$(gum style --foreground {{$.UI_COLOR_MUTED}} "({{.hint}})")"
+      LINES="${LINES}${LINE}"$'\n'
+      {{- end}}
+
+      # Note: espace après l'icône pour compenser le bug de largeur Unicode dans lipgloss
+      gum style --border rounded --border-foreground {{.COLOR}} --width {{.WIDTH}} --padding "0 1" --margin "0 2" \
+        "$(gum style --foreground {{.COLOR}} --bold '{{.ICON}}  {{.TITLE}}')" \
+        "" \
+        "$LINES"
+
+  status-box:
+    desc: "Affiche une box avec des statuts formatés (ok/warn/error/info)"
+    requires:
+      vars: [TITLE, ITEMS]
+    vars:
+      ICON: '{{.ICON | default ""}}'
+      COLOR: '{{.COLOR | default .UI_COLOR_INFO | default "51"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      LABEL_WIDTH: '{{.LABEL_WIDTH | default "20"}}'
+    cmd: |
+      LINES=""
+      {{- range .ITEMS}}
+      LABEL_PADDED=$(printf "%-{{$.LABEL_WIDTH}}s" "{{.label}}")
+      case "{{.status}}" in
+        ok|success|running|active)
+          ICON=""
+          STATUS_COLOR="42"
+          ;;
+        warn|warning|pending)
+          ICON=""
+          STATUS_COLOR="226"
+          ;;
+        error|failed|stopped)
+          ICON=""
+          STATUS_COLOR="196"
+          ;;
+        info|*)
+          ICON=""
+          STATUS_COLOR="51"
+          ;;
+      esac
+      LINE="$(gum style --foreground 240 "  $LABEL_PADDED")$(gum style --foreground $STATUS_COLOR "$ICON {{.value}}")"
+      LINES="${LINES}${LINE}"$'\n'
+      {{- end}}
+
+      gum style --border rounded --border-foreground {{.COLOR}} --width {{.WIDTH}} --padding "0 1" --margin "0 2" \
+        "$(gum style --foreground {{.COLOR}} --bold '{{.ICON}}  {{.TITLE}}')" \
+        "" \
+        "$LINES"
+
+  banner:
+    desc: "Affiche une bannière stylée avec logo ASCII art"
+    requires:
+      vars: [TITLE]
+    vars:
+      SUBTITLE: '{{.SUBTITLE | default ""}}'
+      COLOR: '{{.COLOR | default .UI_COLOR_PRIMARY | default "212"}}'
+      SECONDARY_COLOR: '{{.SECONDARY_COLOR | default "99"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+    cmd: |
+      # Bannière principale
+      MAIN=$(gum style --foreground {{.COLOR}} --bold --align center "{{.TITLE}}")
+
+      {{if .SUBTITLE}}
+      SUB=$(gum style --foreground {{.SECONDARY_COLOR}} --align center "{{.SUBTITLE}}")
+      CONTENT=$(gum join --vertical --align center "$MAIN" "$SUB")
+      {{else}}
+      CONTENT="$MAIN"
+      {{end}}
+
+      gum style --border double --border-foreground {{.COLOR}} \
+        --align center --width {{.WIDTH}} --margin "1 2" --padding "1 4" \
+        "$CONTENT"
+
+  card:
+    desc: "Affiche une carte avec header coloré et contenu"
+    requires:
+      vars: [HEADER, CONTENT]
+    vars:
+      COLOR: '{{.COLOR | default .UI_COLOR_PRIMARY | default "212"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      ICON: '{{.ICON | default ""}}'
+    cmd: |
+      HEADER_TEXT="{{if .ICON}}{{.ICON}} {{end}}{{.HEADER}}"
+      HEADER_STYLED=$(gum style --foreground 0 --background {{.COLOR}} --bold --padding "0 2" "$HEADER_TEXT")
+      CONTENT_STYLED=$(gum style --foreground 255 --padding "1 2" "{{.CONTENT}}")
+
+      gum style --border rounded --border-foreground {{.COLOR}} --width {{.WIDTH}} --margin "0 2" \
+        "$HEADER_STYLED" "$CONTENT_STYLED"
+
+  kv:
+    desc: "Affiche une paire clé:valeur inline stylée"
+    requires:
+      vars: [KEY, VALUE]
+    vars:
+      KEY_COLOR: '{{.KEY_COLOR | default .UI_COLOR_MUTED | default "240"}}'
+      VALUE_COLOR: '{{.VALUE_COLOR | default .UI_COLOR_SUCCESS | default "42"}}'
+      SEPARATOR: '{{.SEPARATOR | default ":"}}'
+    cmd: |
+      echo "$(gum style --foreground {{.KEY_COLOR}} "{{.KEY}}{{.SEPARATOR}}")$(gum style --foreground {{.VALUE_COLOR}} " {{.VALUE}}")"
+
+  divider:
+    desc: "Affiche un séparateur avec texte optionnel"
+    vars:
+      TEXT: '{{.TEXT | default ""}}'
+      COLOR: '{{.COLOR | default "240"}}'
+      WIDTH: '{{.WIDTH | default "60"}}'
+    cmd: |
+      TEXT_VAL="{{.TEXT}}"
+      if [ -n "$TEXT_VAL" ]; then
+        TEXT_LEN=${#TEXT_VAL}
+        LEFT_WIDTH=$(( ({{.WIDTH}} - TEXT_LEN - 2) / 2 ))
+        RIGHT_WIDTH=$(( {{.WIDTH}} - LEFT_WIDTH - TEXT_LEN - 2 ))
+        LEFT=""
+        RIGHT=""
+        for i in $(seq 1 $LEFT_WIDTH); do LEFT="${LEFT}─"; done
+        for i in $(seq 1 $RIGHT_WIDTH); do RIGHT="${RIGHT}─"; done
+        echo "$(gum style --foreground {{.COLOR}} "$LEFT")$(gum style --foreground {{.COLOR}} --bold " $TEXT_VAL ")$(gum style --foreground {{.COLOR}} "$RIGHT")"
+      else
+        LINE=""
+        for i in $(seq 1 {{.WIDTH}}); do LINE="${LINE}─"; done
+        gum style --foreground {{.COLOR}} "$LINE"
+      fi
+
+  badge:
+    desc: "Affiche un badge coloré (tag/label)"
+    requires:
+      vars: [TEXT]
+    vars:
+      COLOR: '{{.COLOR | default "212"}}'
+      BG: '{{.BG | default "0"}}'
+    cmd: |
+      gum style --foreground {{.BG}} --background {{.COLOR}} --bold --padding "0 1" " {{.TEXT}} "
+
+  progress:
+    desc: "Affiche une barre de progression ASCII"
+    requires:
+      vars: [PERCENT]
+    vars:
+      WIDTH: '{{.WIDTH | default "30"}}'
+      LABEL: '{{.LABEL | default ""}}'
+      COLOR: '{{.COLOR | default "42"}}'
+      BG_COLOR: '{{.BG_COLOR | default "240"}}'
+      FILLED_CHAR: '█'
+      EMPTY_CHAR: '░'
+    cmd: |
+      FILLED_COUNT=$(( {{.PERCENT}} * {{.WIDTH}} / 100 ))
+      EMPTY_COUNT=$(( {{.WIDTH}} - FILLED_COUNT ))
+      FILLED_BAR=""
+      EMPTY_BAR=""
+      for i in $(seq 1 $FILLED_COUNT); do FILLED_BAR="${FILLED_BAR}█"; done
+      for i in $(seq 1 $EMPTY_COUNT); do EMPTY_BAR="${EMPTY_BAR}░"; done
+      BAR="${FILLED_BAR}${EMPTY_BAR}"
+
+      LABEL_VAL="{{.LABEL}}"
+      if [ -n "$LABEL_VAL" ]; then
+        echo "$(gum style --foreground 255 "$LABEL_VAL") $(gum style --foreground {{.COLOR}} "$BAR") $(gum style --foreground {{.COLOR}} '{{.PERCENT}}%')"
+      else
+        echo "$(gum style --foreground {{.COLOR}} "$BAR") $(gum style --foreground {{.COLOR}} '{{.PERCENT}}%')"
+      fi
+
+  var-box:
+    desc: "Affiche une box avec des variables formatées (clé: valeur)"
+    requires:
+      vars: [TITLE, VARS]
+    vars:
+      ICON: '{{.ICON | default ""}}'
+      COLOR: '{{.COLOR | default .UI_COLOR_INFO | default "51"}}'
+      WIDTH: '{{.WIDTH | default .UI_WIDTH | default "70"}}'
+      KEY_WIDTH: '{{.KEY_WIDTH | default "14"}}'
+      KEY_COLOR: '{{.KEY_COLOR | default .UI_COLOR_MUTED | default "240"}}'
+      VALUE_COLOR: '{{.VALUE_COLOR | default "255"}}'
+    cmd: |
+      # Générer les lignes formatées
+      LINES=""
+      {{- range .VARS}}
+      KEY_PADDED=$(printf "%-{{$.KEY_WIDTH}}s" "{{.key}}")
+      LINE="$(gum style --foreground {{$.KEY_COLOR}} "  $KEY_PADDED")$(gum style --foreground {{$.VALUE_COLOR}} "{{.value}}")"
+      LINES="${LINES}${LINE}"$'\n'
+      {{- end}}
+
+      # Note: espace après l'icône pour compenser le bug de largeur Unicode dans lipgloss
+      gum style --border rounded --border-foreground {{.COLOR}} --width {{.WIDTH}} --padding "0 1" --margin "0 2" \
+        "$(gum style --foreground {{.COLOR}} --bold '{{.ICON}}  {{.TITLE}}')" \
+        "" \
+        "$LINES"

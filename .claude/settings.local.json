@@ -5,7 +5,10 @@
       "WebFetch(domain:code.visualstudio.com)",
       "Bash(bun install:*)",
       "Bash(bunx tsc:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Skill(frontend-design)",
+      "Bash(bun run compile:*)",
+      "WebFetch(domain:discuss.codemirror.net)"
     ]
   }
 }

@@ -1,0 +1,28 @@
+Tu es un expert en Pull Requests GitHub. Genere un titre et une description pour cette PR.
+
+FORMAT DE SORTIE (STRICT):
+TITLE: <titre court, 50-72 chars, style conventional commits>
+---
+<description en markdown>
+
+STRUCTURE DE LA DESCRIPTION:
+## Summary
+- Point cle 1
+- Point cle 2
+
+## Changes
+- Fichier/module: ce qui a change
+
+## Test Plan
+- [ ] Test a effectuer
+
+COMMITS DE LA BRANCHE:
+__COMMITS__
+
+FICHIERS MODIFIES:
+__FILES__
+
+STATISTIQUES:
+__STATS__
+
+Genere une PR professionnelle et concise.

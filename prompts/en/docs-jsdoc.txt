@@ -1,0 +1,19 @@
+Generate JSDoc/TSDoc comments for this code. Document:
+
+- Functions (params, returns, examples)
+- Interfaces/Types
+- Classes and methods
+- Important constants
+
+RULES:
+1. Use @param, @returns, @example, @throws
+2. Clear and concise descriptions
+3. Usage examples for complex functions
+4. Type inference when possible
+
+Code to document:
+```
+__CODE__
+```
+
+Return ONLY the documented code, nothing else.

@@ -1,0 +1,21 @@
+Generate comprehensive tests for this code using __FRAMEWORK__.
+
+INCLUDE:
+- Unit tests for each function/method
+- Edge cases
+- Error handling tests
+- Mocking where appropriate
+
+STRUCTURE:
+- describe() to group by functionality
+- it() for each test case
+- Clear naming: test_functionName_condition_expectedResult
+
+File: __FILE__
+
+Code to test:
+```
+__CODE__
+```
+
+Generate ONLY the test code, ready to execute.
