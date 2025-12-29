@@ -1,158 +1,173 @@
-# VibeMerge 🎮⚔️
+# VibeMerge - Git Merge Conflict Resolver
 
-> Un éditeur de merge 3-way **épique** pour VS Code, inspiré d'IntelliJ IDEA — avec système de duel et célébration de victoire !
+> Transform merge conflicts into epic duels! The best 3-way diff editor for VS Code, inspired by IntelliJ IDEA.
 
-![VS Code](https://img.shields.io/badge/VS%20Code-^1.85.0-blue?logo=visualstudiocode)
-![Version](https://img.shields.io/badge/version-0.1.0-green)
-![License](https://img.shields.io/badge/license-MIT-orange)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
+[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=10b981)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
+[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=f59e0b)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](LICENSE)
 
 ---
 
-## 📸 Aperçu
+## 🎬 Demo
 
-### 🎬 Démo en action
 ![VibeMerge Demo](media/demo/demo-small.gif)
 
-### Éditeur 3-Way
-![Éditeur principal](media/screenshots/editor-main.png)
-*Vue triple panneau : Current (🛡️) | Result (📝) | Incoming (⚔️)*
+---
 
-### Système de Duel
-| Défense 🛡️ | Victoire ⚔️ | Alliance 🤝 |
-|------------|-------------|-------------|
-| ![Défense](media/screenshots/duel-defense.png) | ![Victoire](media/screenshots/duel-victory.png) | ![Alliance](media/screenshots/duel-alliance.png) |
+## ✨ Why VibeMerge?
 
-### Célébration de Victoire
-![Victoire](media/screenshots/victory-celebration.png)
-*Tous les conflits résolus = Confettis et célébration !*
+| Feature | Description |
+|---------|-------------|
+| **3-Way Merge** | IntelliJ IDEA-style triple panel: Current / Result / Incoming |
+| **Duel System** | Each conflict resolution is an epic battle with animations |
+| **Score Tracking** | Track your Defense, Victory, and Alliance stats |
+| **Victory Celebration** | Confetti explosion when all conflicts are resolved |
+| **Syntax Highlighting** | Automatic language detection and highlighting |
+| **Synchronized Scroll** | All panels scroll together for easy comparison |
 
 ---
 
-## ✨ Fonctionnalités
+## 📸 Screenshots
 
-### 🎯 Éditeur 3-Way Premium
-- **Vue triple panneau** : Current (Gauche) | Result (Centre) | Incoming (Droite)
-- **Scroll synchronisé** entre les trois panneaux
-- **Coloration syntaxique** automatique selon le langage
-- **Numéros de ligne** pour une navigation précise
-- **Support diff3** avec contenu de base pour une meilleure analyse
+### 3-Way Editor
+![Main Editor](media/screenshots/editor-main.png)
+*Triple panel view: Current (🛡️) | Result (📝) | Incoming (⚔️)*
 
-### 🎮 Système de Duel Épique
-Chaque résolution de conflit devient un **duel épique** !
+### Duel System
+| Defense 🛡️ | Victory ⚔️ | Alliance 🤝 |
+|------------|-------------|-------------|
+| ![Defense](media/screenshots/duel-defense.png) | ![Victory](media/screenshots/duel-victory.png) | ![Alliance](media/screenshots/duel-alliance.png) |
 
-| Action | Résultat | Animation |
-|--------|----------|-----------|
-| Accept Left | 🛡️ **DÉFENSE!** | Bouclier cyan lumineux |
-| Accept Right | ⚔️ **VICTOIRE!** | Slash diagonal violet |
-| Accept Both | 🤝 **ALLIANCE!** | Fusion dorée |
+### Victory Celebration
+![Victory](media/screenshots/victory-celebration.png)
+*All conflicts resolved = Confetti and celebration!*
 
-### 📊 Score Board en Temps Réel
-- Compteur de **Défenses** 🛡️
-- Compteur de **Victoires** ⚔️
-- Compteur d'**Alliances** 🤝
-- Animation pulse à chaque point marqué
+---
 
-### 🎉 Célébration de Victoire
-Quand tous les conflits sont résolus :
-- Overlay de célébration avec confettis
-- Animation spectaculaire
-- Bouton de sauvegarde rapide
-- Raccourci clavier affiché
+## ✨ Features
 
-### 🔧 Gestion Intelligente de l'Encodage
-- **Détection automatique** UTF-8, Latin-1, etc.
-- **Correction mojibake** automatique (caractères corrompus)
-- **Préservation** des fins de ligne (LF/CRLF)
-- **Status bar** avec indicateur de confiance
+### 🎯 Premium 3-Way Editor
+- **Triple panel view**: Current (Left) | Result (Center) | Incoming (Right)
+- **Synchronized scrolling** across all three panels
+- **Syntax highlighting** based on file type
+- **Line numbers** for precise navigation
+- **diff3 support** with base content for better analysis
+
+### 🎮 Epic Duel System
+Every conflict resolution becomes an **epic duel**!
+
+| Action | Result | Animation |
+|--------|--------|-----------|
+| Accept Left | 🛡️ **DEFENSE!** | Glowing cyan shield |
+| Accept Right | ⚔️ **VICTORY!** | Purple diagonal slash |
+| Accept Both | 🤝 **ALLIANCE!** | Golden merge fusion |
+
+### 📊 Real-Time Score Board
+- **Defense** counter 🛡️
+- **Victory** counter ⚔️
+- **Alliance** counter 🤝
+- Pulse animation on each point scored
+
+### 🎉 Victory Celebration
+When all conflicts are resolved:
+- Celebration overlay with confetti
+- Spectacular animation
+- Quick save button
+- Keyboard shortcut displayed
+
+### 🔧 Smart Encoding Management
+- **Auto-detection** of UTF-8, Latin-1, etc.
+- **Automatic mojibake fix** for corrupted characters
+- **Preservation** of line endings (LF/CRLF)
+- **Status bar** with confidence indicator
 
 ---
 
 ## 📦 Installation
 
-### Option 1 : Depuis le fichier .vsix (recommandé)
+### Option 1: VS Code Marketplace (Recommended)
 
-1. Télécharge le fichier `vibe-merge-x.x.x.vsix` depuis les [Releases](../../releases)
-2. Dans VS Code, ouvre la palette de commandes (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-3. Tape **"Extensions: Install from VSIX..."**
-4. Sélectionne le fichier `.vsix` téléchargé
-5. Redémarre VS Code
+1. Open VS Code
+2. Go to Extensions (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+3. Search for **"VibeMerge"**
+4. Click **Install**
 
-### Option 2 : Build depuis les sources
+### Option 2: From VSIX file
+
+1. Download `vibe-merge-x.x.x.vsix` from [Releases](https://github.com/d3nai/vibe-merge/releases)
+2. In VS Code, open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+3. Type **"Extensions: Install from VSIX..."**
+4. Select the downloaded `.vsix` file
+5. Restart VS Code
+
+### Option 3: Build from source
 
 ```bash
-# Clone le repo
-git clone https://github.com/your-username/vibe-merge.git
+git clone https://github.com/d3nai/vibe-merge.git
 cd vibe-merge
-
-# Installe les dépendances
 bun install
-
-# Compile
 bun run compile
-
-# Crée le package
 bunx @vscode/vsce package --allow-missing-repository
-
-# Installe le .vsix généré via VS Code (voir Option 1)
 ```
 
 ---
 
-## 🎹 Raccourcis Clavier
+## 🎹 Keyboard Shortcuts
 
-| Raccourci | Action |
-|-----------|--------|
-| `Cmd+Alt+M` (Mac) / `Ctrl+Alt+M` (Win/Linux) | Ouvrir l'éditeur de merge |
-| `Cmd+Shift+←` / `Ctrl+Shift+←` | Accepter gauche (Défense 🛡️) |
-| `Cmd+Shift+→` / `Ctrl+Shift+→` | Accepter droite (Victoire ⚔️) |
-| `Alt+↑` / `Alt+↓` | Naviguer entre les conflits |
-| `Cmd+S` / `Ctrl+S` | Sauvegarder |
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Alt+M` (Mac) / `Ctrl+Alt+M` (Win/Linux) | Open Merge Editor |
+| `Cmd+Shift+←` / `Ctrl+Shift+←` | Accept Left (Defense 🛡️) |
+| `Cmd+Shift+→` / `Ctrl+Shift+→` | Accept Right (Victory ⚔️) |
+| `Alt+↑` / `Alt+↓` | Navigate between conflicts |
+| `Cmd+S` / `Ctrl+S` | Save |
 
 ---
 
-## 🎮 Utilisation
+## 🎮 Usage
 
-### Commandes disponibles
+### Available Commands
 
-Ouvre la palette de commandes (`Cmd+Shift+P`) et tape "VibeMerge" :
+Open the Command Palette (`Cmd+Shift+P`) and type "VibeMerge":
 
-| Commande | Description |
-|----------|-------------|
-| **Open Merge Editor** | Ouvre l'éditeur de merge pour le fichier actuel |
-| **Resolve All Conflicts** | Auto-résout les conflits simples |
-| **Accept Current (Left)** | Accepte la version actuelle (Défense) |
-| **Accept Incoming (Right)** | Accepte la version entrante (Victoire) |
-| **Accept Both Changes** | Garde les deux versions (Alliance) |
+| Command | Description |
+|---------|-------------|
+| **Open Merge Editor** | Open the merge editor for the current file |
+| **Resolve All Conflicts** | Auto-resolve simple conflicts |
+| **Accept Current (Left)** | Accept current version (Defense) |
+| **Accept Incoming (Right)** | Accept incoming version (Victory) |
+| **Accept Both Changes** | Keep both versions (Alliance) |
 
-### Workflow typique
+### Typical Workflow
 
 ```
-1. 🔀 Tu as un conflit git après un merge/rebase
-2. 📂 Ouvre le fichier en conflit
-3. ⌨️  Utilise Cmd+Alt+M pour ouvrir VibeMerge
-4. 👀 Tu verras 3 panneaux :
+1. 🔀 You have a git conflict after merge/rebase
+2. 📂 Open the conflicted file
+3. ⌨️  Press Cmd+Alt+M to open VibeMerge
+4. 👀 You'll see 3 panels:
    ┌─────────────┬─────────────┬─────────────┐
    │   CURRENT   │   RESULT    │  INCOMING   │
    │   (Yours)   │  (Preview)  │  (Theirs)   │
    │     🛡️      │     📝      │     ⚔️      │
    └─────────────┴─────────────┴─────────────┘
-5. 🎮 Résous chaque conflit - Profite des animations de duel !
-6. 🎉 Tous résolus ? Célébration automatique !
-7. 💾 Sauvegarde avec Cmd+S
+5. 🎮 Resolve each conflict - Enjoy the duel animations!
+6. 🎉 All resolved? Automatic celebration!
+7. 💾 Save with Cmd+S
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-Dans les paramètres VS Code (`Cmd+,`), recherche "VibeMerge" :
+In VS Code settings (`Cmd+,`), search for "VibeMerge":
 
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `vibeMerge.autoApplyNonConflicting` | Applique auto les changements non-conflictuels | `true` |
-| `vibeMerge.showLineNumbers` | Affiche les numéros de ligne | `true` |
-| `vibeMerge.highlightSyntax` | Active la coloration syntaxique | `true` |
-| `vibeMerge.syncScroll` | Synchronise le scroll entre les panneaux | `true` |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `vibeMerge.autoApplyNonConflicting` | Auto-apply non-conflicting changes | `true` |
+| `vibeMerge.showLineNumbers` | Show line numbers | `true` |
+| `vibeMerge.highlightSyntax` | Enable syntax highlighting | `true` |
+| `vibeMerge.syncScroll` | Synchronize scroll between panels | `true` |
 
 ---
 
@@ -160,34 +175,34 @@ Dans les paramètres VS Code (`Cmd+,`), recherche "VibeMerge" :
 
 ```
 src/
-├── extension.ts              # Point d'entrée, activation
+├── extension.ts              # Entry point, activation
 ├── providers/
-│   ├── MergeEditorProvider.ts    # Gestion du webview et messages
-│   └── ConflictFileDecorator.ts  # Badges sur fichiers en conflit
+│   ├── MergeEditorProvider.ts    # Webview and message handling
+│   └── ConflictFileDecorator.ts  # Badge decorations on conflict files
 ├── utils/
-│   ├── ConflictParser.ts     # Parse les marqueurs git (<<<, ===, >>>)
-│   ├── DiffUtils.ts          # LCS, word-diff, analyse de conflits
-│   ├── EncodingUtils.ts      # Détection encodage, fix mojibake
-│   └── GitConflictDetector.ts # Détection fichiers en conflit
+│   ├── ConflictParser.ts     # Parse git markers (<<<, ===, >>>)
+│   ├── DiffUtils.ts          # LCS, word-diff, conflict analysis
+│   ├── EncodingUtils.ts      # Encoding detection, mojibake fix
+│   └── GitConflictDetector.ts # Conflict file detection
 └── webview/
-    └── MergeEditorWebview.ts # Interface 3-panneaux + Duel System
+    └── MergeEditorWebview.ts # 3-panel interface + Duel System
 ```
 
 ---
 
-## 🛠️ Développement
+## 🛠️ Development
 
 ```bash
-# Mode watch (recompile automatiquement)
+# Watch mode (auto-recompile)
 bun run watch
 
-# Lancer en mode debug
-# Appuie sur F5 dans VS Code pour lancer l'Extension Development Host
+# Debug mode
+# Press F5 in VS Code to launch Extension Development Host
 
-# Linter
+# Lint
 bun run lint
 
-# Package pour distribution
+# Package for distribution
 bunx @vscode/vsce package --allow-missing-repository
 ```
 
@@ -195,33 +210,33 @@ bunx @vscode/vsce package --allow-missing-repository
 
 ## 🎨 Design Inspirations
 
-- **IntelliJ IDEA** — Interface 3-way merge
-- **KDiff3** — Algorithmes de détection de conflits
-- **Fighting Games** — Système de duel et scores
+- **IntelliJ IDEA** — 3-way merge interface
+- **KDiff3** — Conflict detection algorithms
+- **Fighting Games** — Duel system and scoring
 
 ---
 
 ## 📜 Changelog
 
 ### v0.1.0 (Initial Release)
-- ✅ Éditeur 3-way avec scroll synchronisé
-- ✅ Parsing des conflits git (standard et diff3)
-- ✅ Système de Duel avec animations (Défense/Victoire/Alliance)
-- ✅ Score Board en temps réel
-- ✅ Célébration de victoire avec confettis
-- ✅ Gestion intelligente de l'encodage
-- ✅ Coloration syntaxique automatique
-- ✅ Raccourcis clavier complets
+- 3-way editor with synchronized scrolling
+- Git conflict parsing (standard and diff3)
+- Duel System with animations (Defense/Victory/Alliance)
+- Real-time Score Board
+- Victory celebration with confetti
+- Smart encoding management
+- Automatic syntax highlighting
+- Complete keyboard shortcuts
 
 ---
 
 ## 📄 License
 
-MIT © 2024
+MIT © 2024 d3nai
 
 ---
 
 <p align="center">
-  <strong>Made with ❤️ and ⚔️</strong><br>
+  <strong>Made with ❤️ and ⚔️ by d3n</strong><br>
   <em>May your merges be ever victorious!</em>
 </p>
