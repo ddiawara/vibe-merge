@@ -84,3 +84,4 @@ bunx @vscode/vsce package --allow-missing-repository
 - `.vscode/` - VS Code workspace settings
 - `prompts/` - AI prompts templates
 - `scripts/` - Private utility scripts
+- `test-conflict*` - Test conflict files
