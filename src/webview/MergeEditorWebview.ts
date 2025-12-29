@@ -154,6 +154,36 @@ export function getWebviewContent(
             </div>
         </footer>
 
+        <!-- Duel Result Overlay -->
+        <div class="duel-overlay" id="duelOverlay">
+            <div class="duel-flash" id="duelFlash"></div>
+            <div class="duel-content">
+                <div class="duel-icon" id="duelIcon"></div>
+                <div class="duel-title" id="duelTitle"></div>
+                <div class="duel-subtitle" id="duelSubtitle"></div>
+                <div class="duel-effect" id="duelEffect"></div>
+            </div>
+        </div>
+
+        <!-- Score Board -->
+        <div class="score-board" id="scoreBoard">
+            <div class="score-title">DUEL</div>
+            <div class="score-items">
+                <div class="score-item defense">
+                    <span class="score-icon">🛡️</span>
+                    <span class="score-value" id="scoreDefense">0</span>
+                </div>
+                <div class="score-item victory">
+                    <span class="score-icon">⚔️</span>
+                    <span class="score-value" id="scoreVictory">0</span>
+                </div>
+                <div class="score-item alliance">
+                    <span class="score-icon">🤝</span>
+                    <span class="score-value" id="scoreAlliance">0</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Victory Celebration Overlay -->
         <div class="victory-overlay" id="victoryOverlay">
             <div class="victory-particles" id="victoryParticles"></div>
@@ -670,6 +700,259 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .token-regex { color: var(--syntax-regex); }
 .token-tag { color: var(--syntax-tag); }
 .token-attribute { color: var(--syntax-attribute); }
+
+/* ============================================
+   DUEL SYSTEM - Epic Battle Experience
+   ============================================ */
+
+/* Score Board - Floating in corner */
+.score-board {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+    min-width: 100px;
+}
+.score-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.score-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.score-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
+}
+.score-item.defense { background: hsla(168, 70%, 50%, 0.1); }
+.score-item.victory { background: hsla(270, 70%, 60%, 0.1); }
+.score-item.alliance { background: hsla(45, 90%, 50%, 0.1); }
+.score-icon { font-size: 14px; }
+.score-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+.score-item.pulse {
+    animation: scorePulse 0.5s ease-out;
+}
+@keyframes scorePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Duel Overlay */
+.duel-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    pointer-events: none;
+}
+.duel-overlay.show {
+    display: flex;
+}
+
+/* Flash background effect */
+.duel-flash {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+}
+.duel-overlay.show .duel-flash {
+    animation: duelFlashAnim 0.6s ease-out forwards;
+}
+@keyframes duelFlashAnim {
+    0% { opacity: 0.8; }
+    100% { opacity: 0; }
+}
+
+/* Defense flash - Green/Cyan */
+.duel-overlay.duel-defense .duel-flash {
+    background: radial-gradient(circle at center, hsla(168, 80%, 50%, 0.6) 0%, transparent 70%);
+}
+/* Victory flash - Purple */
+.duel-overlay.duel-victory .duel-flash {
+    background: radial-gradient(circle at center, hsla(270, 80%, 60%, 0.6) 0%, transparent 70%);
+}
+/* Alliance flash - Gold */
+.duel-overlay.duel-alliance .duel-flash {
+    background: radial-gradient(circle at center, hsla(45, 90%, 55%, 0.6) 0%, transparent 70%);
+}
+
+/* Duel Content */
+.duel-content {
+    position: relative;
+    text-align: center;
+    transform: scale(0.5);
+    opacity: 0;
+}
+.duel-overlay.show .duel-content {
+    animation: duelContentPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes duelContentPop {
+    0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Duel Icon */
+.duel-icon {
+    font-size: 72px;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 0 30px currentColor);
+}
+.duel-overlay.duel-defense .duel-icon {
+    animation: defenseIconAnim 0.6s ease-out;
+    color: hsl(168, 70%, 50%);
+}
+.duel-overlay.duel-victory .duel-icon {
+    animation: victoryIconAnim 0.6s ease-out;
+    color: hsl(270, 70%, 60%);
+}
+.duel-overlay.duel-alliance .duel-icon {
+    animation: allianceIconAnim 0.6s ease-out;
+    color: hsl(45, 90%, 55%);
+}
+
+@keyframes defenseIconAnim {
+    0% { transform: scale(0.5) rotate(-10deg); }
+    50% { transform: scale(1.3) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes victoryIconAnim {
+    0% { transform: translateX(50px) rotate(45deg); opacity: 0; }
+    50% { transform: translateX(-10px) rotate(-5deg); }
+    100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+@keyframes allianceIconAnim {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Duel Title */
+.duel-title {
+    font-size: 32px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    text-shadow: 0 0 40px currentColor;
+}
+.duel-overlay.duel-defense .duel-title {
+    color: hsl(168, 70%, 55%);
+}
+.duel-overlay.duel-victory .duel-title {
+    color: hsl(270, 70%, 65%);
+}
+.duel-overlay.duel-alliance .duel-title {
+    color: hsl(45, 90%, 60%);
+}
+
+/* Duel Subtitle */
+.duel-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+/* Special Effects */
+.duel-effect {
+    position: absolute;
+    inset: -100px;
+    pointer-events: none;
+}
+
+/* Defense Shield Effect */
+.duel-overlay.duel-defense .duel-effect::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200px;
+    height: 200px;
+    transform: translate(-50%, -50%);
+    border: 4px solid hsl(168, 70%, 50%);
+    border-radius: 50%;
+    animation: shieldExpand 0.6s ease-out forwards;
+    box-shadow: 0 0 30px hsl(168, 70%, 50%), inset 0 0 30px hsla(168, 70%, 50%, 0.3);
+}
+@keyframes shieldExpand {
+    0% { width: 50px; height: 50px; opacity: 1; }
+    100% { width: 300px; height: 300px; opacity: 0; }
+}
+
+/* Victory Slash Effect */
+.duel-overlay.duel-victory .duel-effect::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 300px;
+    background: linear-gradient(180deg, transparent, hsl(270, 80%, 65%), transparent);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    animation: slashEffect 0.4s ease-out forwards;
+    box-shadow: 0 0 20px hsl(270, 70%, 60%);
+}
+@keyframes slashEffect {
+    0% { transform: translate(-50%, -50%) rotate(-45deg) scaleY(0); opacity: 1; }
+    50% { transform: translate(-50%, -50%) rotate(-45deg) scaleY(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) rotate(-45deg) scaleY(1); opacity: 0; }
+}
+
+/* Alliance Merge Effect */
+.duel-overlay.duel-alliance .duel-effect::before,
+.duel-overlay.duel-alliance .duel-effect::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    animation: mergeEffect 0.6s ease-out forwards;
+}
+.duel-overlay.duel-alliance .duel-effect::before {
+    left: 30%;
+    background: radial-gradient(circle, hsl(168, 70%, 50%) 0%, transparent 70%);
+    animation-name: mergeEffectLeft;
+}
+.duel-overlay.duel-alliance .duel-effect::after {
+    right: 30%;
+    background: radial-gradient(circle, hsl(270, 70%, 60%) 0%, transparent 70%);
+    animation-name: mergeEffectRight;
+}
+@keyframes mergeEffectLeft {
+    0% { transform: translateY(-50%) translateX(-50px); opacity: 1; }
+    100% { transform: translateY(-50%) translateX(50px); opacity: 0; }
+}
+@keyframes mergeEffectRight {
+    0% { transform: translateY(-50%) translateX(50px); opacity: 1; }
+    100% { transform: translateY(-50%) translateX(-50px); opacity: 0; }
+}
 
 /* ============================================
    VICTORY CELEBRATION - Premium Experience
@@ -1381,6 +1664,11 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
         c.winner = side; // Track who won the duel: 'left', 'right', or 'both'
         vscode.postMessage({ command: 'acceptChange', conflictIndex: i, side: side });
 
+        // DUEL SYSTEM: Show epic result animation for first-time resolution
+        if (!wasResolved) {
+            showDuelResult(side);
+        }
+
         // If it was already resolved (re-resolution), just update without scrolling away
         if (wasResolved) {
             pendingNavigateToIndex = i; // Stay on current after re-render
@@ -1737,6 +2025,88 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
     function checkVictory() {
         if (conflicts.every(c => c.resolved) && !victoryShown) {
             setTimeout(showVictory, 400);
+        }
+    }
+
+    // ============================================
+    // DUEL SYSTEM - Epic Battle Experience
+    // ============================================
+    const duelOverlay = document.getElementById('duelOverlay');
+    const duelIcon = document.getElementById('duelIcon');
+    const duelTitle = document.getElementById('duelTitle');
+    const duelSubtitle = document.getElementById('duelSubtitle');
+    const scoreDefense = document.getElementById('scoreDefense');
+    const scoreVictoryEl = document.getElementById('scoreVictory');
+    const scoreAlliance = document.getElementById('scoreAlliance');
+
+    const duelScore = { defense: 0, victory: 0, alliance: 0 };
+
+    const duelConfig = {
+        left: {
+            icon: '🛡️',
+            title: 'DÉFENSE!',
+            subtitle: 'Le code actuel tient bon',
+            class: 'duel-defense',
+            scoreKey: 'defense'
+        },
+        right: {
+            icon: '⚔️',
+            title: 'VICTOIRE!',
+            subtitle: 'Le challenger conquiert',
+            class: 'duel-victory',
+            scoreKey: 'victory'
+        },
+        both: {
+            icon: '🤝',
+            title: 'ALLIANCE!',
+            subtitle: 'Union des forces',
+            class: 'duel-alliance',
+            scoreKey: 'alliance'
+        }
+    };
+
+    function showDuelResult(side) {
+        const config = duelConfig[side];
+        if (!config) return;
+
+        // Update duel content
+        duelIcon.textContent = config.icon;
+        duelTitle.textContent = config.title;
+        duelSubtitle.textContent = config.subtitle;
+
+        // Remove previous classes and add new one
+        duelOverlay.classList.remove('duel-defense', 'duel-victory', 'duel-alliance');
+        duelOverlay.classList.add(config.class);
+
+        // Show overlay
+        duelOverlay.classList.add('show');
+
+        // Update score
+        duelScore[config.scoreKey]++;
+        updateScoreBoard(config.scoreKey);
+
+        // Auto-hide after animation
+        setTimeout(() => {
+            duelOverlay.classList.remove('show');
+        }, 1200);
+    }
+
+    function updateScoreBoard(highlightKey) {
+        scoreDefense.textContent = duelScore.defense;
+        scoreVictoryEl.textContent = duelScore.victory;
+        scoreAlliance.textContent = duelScore.alliance;
+
+        // Pulse animation on updated score
+        const scoreItems = {
+            defense: scoreDefense.parentElement,
+            victory: scoreVictoryEl.parentElement,
+            alliance: scoreAlliance.parentElement
+        };
+
+        if (scoreItems[highlightKey]) {
+            scoreItems[highlightKey].classList.remove('pulse');
+            void scoreItems[highlightKey].offsetWidth; // Force reflow
+            scoreItems[highlightKey].classList.add('pulse');
         }
     }
 
