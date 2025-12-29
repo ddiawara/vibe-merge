@@ -75,7 +75,10 @@ bunx @vscode/vsce package --allow-missing-repository
 ## Files Excluded from Public
 
 - `taskfiles/` - Private automation scripts
+- `Taskfile.yml` - Task runner config
 - `CONTRIBUTING.md` - This file (private workflow docs)
+- `CLAUDE.md` - Claude Code instructions
+- `.copier-answers.yml` - Copier template answers
 - `.flox/` - Flox environment config
 - `.claude/` - Claude Code settings
 - `.vscode/` - VS Code workspace settings
