@@ -6,6 +6,8 @@ node_modules
 .DS_Store
 *.log
 npm-debug.log*
+copie.*
+conflit_*
 # ============================================
 # Taskfile Starter - Add to your .gitignore
 # ============================================
