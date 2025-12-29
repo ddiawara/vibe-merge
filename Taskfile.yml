@@ -349,12 +349,6 @@ tasks:
             gum style --foreground 240 "   Résolvez-les manuellement puis supprimez les .rej"
           fi
 
-          # Rappel gitignore_to_append
-          if [ -f "gitignore_to_append" ]; then
-            echo ""
-            gum style --foreground 51 " Nouveau fichier gitignore_to_append détecté"
-            gum style --foreground 240 "   cat gitignore_to_append >> .gitignore && rm gitignore_to_append"
-          fi
         else
           echo ""
           gum style --foreground 196 " Update échoué"
@@ -383,13 +377,6 @@ tasks:
           copier recopy --vcs-ref "$TARGET_REF" --skip-answered -f --trust
           echo ""
           gum style --foreground 42 " Template ré-appliqué!"
-
-          # Rappel gitignore_to_append
-          if [ -f "gitignore_to_append" ]; then
-            echo ""
-            gum style --foreground 51 " N'oubliez pas:"
-            gum style --foreground 240 "   cat gitignore_to_append >> .gitignore && rm gitignore_to_append"
-          fi
         else
           gum style --foreground 240 " Annulé"
         fi

@@ -35,9 +35,11 @@ gh.pkg-path = "gh"
 # VARIABLES D'ENVIRONNEMENT
 # =============================================================================
 [vars]
-PROJECT_NAME = "Git Merge Editor"
+PROJECT_NAME = "VibeMerge"
 PROJECT_VERSION = "0.1.0"
-AI_MODEL = "qwen2.5-coder:14b"
+AI_PROVIDER = "claude"
+CLAUDE_MODEL = "haiku"
+OLLAMA_MODEL = "qwen2.5-coder:14b"
 AI_LANG = "fr"
 OLLAMA_HOST = "http://localhost:11434"
 

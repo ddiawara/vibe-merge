@@ -1,8 +1,8 @@
 # taskfiles/ai.yml
-# Commandes IA avec Ollama pour le développement
+# Commandes IA avec Claude CLI pour le développement
 # Usage: task ai:git:commit
 #
-# Ce fichier utilise Ollama en local pour:
+# Ce fichier utilise Claude Code CLI pour:
 # - Génération de messages de commit
 # - Review de code
 # - Documentation
@@ -16,11 +16,15 @@ silent: true
 # VARIABLES GLOBALES
 # ============================================================================
 vars:
-  AI_PROVIDER: '{{.AI_PROVIDER | default "ollama"}}'
-  AI_MODEL: '{{.AI_MODEL | default "qwen2.5-coder:14b"}}'
-  AI_MODEL_REVIEW: '{{.AI_MODEL_REVIEW | default "qwen2.5-coder:14b"}}'
+  AI_PROVIDER: '{{.AI_PROVIDER | default "claude"}}'  # claude ou ollama
   AI_LANG: '{{.AI_LANG | default "fr"}}'
-  OLLAMA_HOST: '{{.OLLAMA_HOST | default "http://localhost:11434"}}'
+
+  # Modèles par provider (permet d'avoir les deux configurés indépendamment)
+  _CLAUDE_MODEL: '{{.CLAUDE_MODEL | default "haiku"}}'         # haiku, sonnet, opus
+  _OLLAMA_MODEL: '{{.OLLAMA_MODEL | default "qwen2.5-coder:14b"}}'  # ou llama3.2, etc.
+
+  # AI_MODEL = automatiquement le bon selon le provider
+  AI_MODEL: '{{if eq .AI_PROVIDER "claude"}}{{._CLAUDE_MODEL}}{{else}}{{._OLLAMA_MODEL}}{{end}}'
 
   # Couleurs
   PRIMARY: "212"
@@ -53,10 +57,43 @@ tasks:
     cmds:
       - task: utils:check-tools
 
+  _check-claude:
+    internal: true
+    cmds:
+      - |
+        if ! command -v claude &>/dev/null; then
+          gum style --foreground {{.ERROR}} " Claude CLI non installé"
+          gum style --foreground {{.MUTED}} "   Installe-le: https://claude.ai/code"
+          exit 1
+        fi
+
   _check-ollama:
     internal: true
     cmds:
       - task: utils:check-ollama
+
+  _check-ai:
+    internal: true
+    cmds:
+      - |
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          if ! command -v claude &>/dev/null; then
+            gum style --foreground {{.ERROR}} " Claude CLI non installé"
+            gum style --foreground {{.MUTED}} "   Installe-le: https://claude.ai/code"
+            exit 1
+          fi
+        else
+          if ! command -v ollama &>/dev/null; then
+            gum style --foreground {{.ERROR}} " Ollama CLI non installé"
+            gum style --foreground {{.MUTED}} "   Installe-le: https://ollama.ai"
+            exit 1
+          fi
+          if ! ollama list &>/dev/null 2>&1; then
+            gum style --foreground {{.ERROR}} " Ollama non disponible"
+            gum style --foreground {{.MUTED}} "   Lance: ollama serve"
+            exit 1
+          fi
+        fi
 
   # --------------------------------------------------------------------------
   # MENU PAR DEFAUT
@@ -97,33 +134,218 @@ tasks:
         vars: {TEXT: "  task ai:test         - Generer des tests (Vitest/Jest)"}
       - task: ui:spacer
       - task: ui:section
-        vars: {TITLE: "󱄅 Ollama:"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:start        - Demarrer Ollama"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:stop         - Arreter Ollama"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:pull         - Telecharger un modele"}
+        vars: {TITLE: " Config:"}
       - task: ui:info
         vars: {TEXT: "  task ai:config       - Configuration IA"}
-      - task: ui:spacer
-      - task: ui:section
-        vars: {TITLE: " Test:"}
       - task: ui:info
-        vars: {TEXT: "  task ai:hello        - Test du systeme de prompts"}
+        vars: {TEXT: "  task ai:hello        - Test du systeme Claude CLI"}
       - task: ui:spacer
       - task: ui:muted
         vars: {TEXT: "  Provider: {{.AI_PROVIDER}} | Model: {{.AI_MODEL}}"}
       - task: ui:spacer
 
   # --------------------------------------------------------------------------
-  # MENU PRINCIPAL
+  # MENU GIT
+  # --------------------------------------------------------------------------
+
+  git:
+    desc: "Menu Git - commit, pr, merge, branch, tag, main"
+    cmds:
+      - clear
+      - task: ui:header
+        vars: {TITLE: "AI:GIT - OUTILS GIT AVEC IA", COLOR: "{{.PRIMARY}}"}
+      - task: ui:spacer
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:main     - Workflow complet (commit + PR + merge)"}
+      - task: ui:spacer
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:commit   - Commit YOLO (auto add + commit + push)"}
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:pr       - Creer une Pull Request avec IA"}
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:merge    - Merger une Pull Request"}
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:branch   - Creer une branche (Conventional Commits)"}
+      - task: ui:info
+        vars: {TEXT: "  task ai:git:tag      - Creer un tag versionne (semver)"}
+      - task: ui:spacer
+      - task: ui:muted
+        vars: {TEXT: "  Provider: {{.AI_PROVIDER}} | Model: {{.AI_MODEL}}"}
+      - task: ui:spacer
+
+  # --------------------------------------------------------------------------
+  # GIT:MAIN - Workflow complet: commit + PR + merge
+  # --------------------------------------------------------------------------
+
+  git:main:
+    desc: "Workflow complet: commit + PR + merge (fin de sprint)"
+    deps: [_check-tools, _check-ai]
+    cmds:
+      - |
+        gum style --foreground {{.PRIMARY}} --bold -- "--- WORKFLOW FIN DE SPRINT ---"
+        echo ""
+
+        # Vérifier que gh est installé et authentifié
+        if ! command -v gh &>/dev/null; then
+          gum style --foreground {{.ERROR}} " GitHub CLI (gh) non installé"
+          exit 1
+        fi
+        if ! gh auth status &>/dev/null; then
+          gum style --foreground {{.ERROR}} " GitHub CLI non authentifié"
+          exit 1
+        fi
+
+        CURRENT_BRANCH=$(git branch --show-current)
+
+        # Détecter la branche principale
+        if git show-ref --verify --quiet refs/heads/main; then
+          BASE_BRANCH="main"
+        else
+          BASE_BRANCH="master"
+        fi
+
+        if [ "$CURRENT_BRANCH" = "$BASE_BRANCH" ]; then
+          gum style --foreground {{.ERROR}} " Tu es sur $BASE_BRANCH - crée d'abord une branche feature"
+          exit 1
+        fi
+
+        gum style --foreground {{.MUTED}} "Branche: $CURRENT_BRANCH → $BASE_BRANCH ({{.AI_PROVIDER}}/{{.AI_MODEL}})"
+        echo ""
+
+        # ETAPE 1: COMMIT
+        gum style --foreground {{.PRIMARY}} "├─ ETAPE 1/3: COMMIT"
+
+        MODIFIED=$(git diff --name-only 2>/dev/null)
+        STAGED=$(git diff --cached --name-only 2>/dev/null)
+        UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null)
+
+        if [ -n "$MODIFIED" ] || [ -n "$STAGED" ] || [ -n "$UNTRACKED" ]; then
+          [ -z "$(git diff --cached --name-only)" ] && git add . 2>/dev/null
+
+          FILES=$(git diff --cached --name-only)
+          FILE_COUNT=$(echo "$FILES" | wc -l | tr -d ' ')
+          gum style --foreground {{.MUTED}} "│  $FILE_COUNT fichier(s) à commiter"
+
+          DIFF=$(git diff --cached --no-color | head -c 4000)
+          SCOPE=$(echo "$FILES" | python3 {{.ROOT_DIR}}/scripts/taskutil.py field --head 1 --delimiter "/" --index 0 --lowercase)
+          AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
+
+          # Construire le prompt via taskutil.py
+          PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+            --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/commit-yolo.txt" \
+            --files "$FILES" \
+            --scope "$SCOPE" \
+            --diff "$DIFF")
+
+          # Appel IA
+          if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+            RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+          else
+            RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+          fi
+
+          # Extraire commit message via taskutil.py
+          COMMIT_MSG=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+            --pattern conventional-commit \
+            --fallback "chore($SCOPE): update files")
+
+          gum style --foreground {{.MUTED}} "│  Message: $COMMIT_MSG"
+          git commit -m "$COMMIT_MSG" >/dev/null 2>&1
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          git push -u origin "$CURRENT_BRANCH" >/dev/null 2>&1
+          gum style --foreground {{.SUCCESS}} "├─  Commit + Push OK ($COMMIT_SHA)"
+        else
+          gum style --foreground {{.SUCCESS}} "├─  Rien à commiter"
+        fi
+        echo ""
+
+        # ETAPE 2: PULL REQUEST
+        gum style --foreground {{.PRIMARY}} "├─ ETAPE 2/3: PULL REQUEST"
+
+        EXISTING_PR=$(gh pr list --head "$CURRENT_BRANCH" --state open --json number,url --jq '.[0]' 2>/dev/null)
+
+        if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
+          PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.number')
+          PR_URL=$(echo "$EXISTING_PR" | jq -r '.url')
+          gum style --foreground {{.WARNING}} "│  PR #$PR_NUMBER existe déjà"
+          gum style --foreground {{.SUCCESS}} "├─  $PR_URL"
+        else
+          COMMITS_FULL=$(git log "$BASE_BRANCH..$CURRENT_BRANCH" --pretty=format:"%s%n%b" 2>/dev/null | head -c 3000)
+          FILES_CHANGED=$(git diff "$BASE_BRANCH..$CURRENT_BRANCH" --name-only 2>/dev/null)
+          DIFF_STAT=$(git diff "$BASE_BRANCH..$CURRENT_BRANCH" --stat 2>/dev/null | tail -5)
+          AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
+
+          # Construire le prompt via taskutil.py
+          PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+            --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/pr.txt" \
+            --files "$FILES_CHANGED" \
+            --commits "$COMMITS_FULL" \
+            --stats "$DIFF_STAT")
+
+          # Appel IA
+          if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+            RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+          else
+            RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+          fi
+
+          # Extraire titre et body via taskutil.py
+          PR_TITLE=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+            --pattern pr-title \
+            --fallback "feat($CURRENT_BRANCH): merge to $BASE_BRANCH")
+          PR_BODY=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+            --pattern pr-body \
+            --fallback "Auto-generated PR from branch $CURRENT_BRANCH")
+
+          gum style --foreground {{.MUTED}} "│  Titre: $PR_TITLE"
+
+          PR_OUTPUT=$(gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base "$BASE_BRANCH" 2>&1)
+
+          if [ $? -eq 0 ]; then
+            PR_NUMBER=$(echo "$PR_OUTPUT" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract --pattern pr-number)
+            gum style --foreground {{.SUCCESS}} "├─  PR #$PR_NUMBER créée: $PR_OUTPUT"
+          else
+            gum style --foreground {{.ERROR}} "├─  Erreur: $PR_OUTPUT"
+            exit 1
+          fi
+        fi
+        echo ""
+
+        # ETAPE 3: MERGE
+        gum style --foreground {{.PRIMARY}} "├─ ETAPE 3/3: MERGE"
+        gum style --foreground {{.MUTED}} "│  Lancement du merge interactif..."
+        gum style --foreground {{.MUTED}} "├─"
+        echo ""
+
+        task ai:git:merge
+
+        echo ""
+        gum style --foreground {{.PRIMARY}} --bold -- "--- PROCHAINES ETAPES ---"
+        echo ""
+
+        # Afficher les derniers tags
+        LAST_TAGS=$(git tag --sort=-version:refname 2>/dev/null | head -3)
+        if [ -n "$LAST_TAGS" ]; then
+          gum style --foreground {{.MUTED}} " 3 dernières releases:"
+          echo "$LAST_TAGS" | while read tag; do
+            TAG_DATE=$(git log -1 --format="%ci" "$tag" 2>/dev/null | cut -d' ' -f1)
+            echo "    $(gum style --foreground {{.SUCCESS}} "$tag")  $(gum style --foreground {{.MUTED}} "($TAG_DATE)")"
+          done
+          echo ""
+        fi
+
+        gum style --foreground {{.MUTED}} "Pour créer un nouveau tag"
+        gum style --border rounded --border-foreground {{.PRIMARY}} --padding "0 2" --margin "0 2" --foreground {{.SUCCESS}} --bold 'task ai:git:tag'
+        echo ""
+
+  # --------------------------------------------------------------------------
+  # MENU PRINCIPAL (INTERNAL)
   # --------------------------------------------------------------------------
 
   menu:
     internal: true
     desc: "Menu IA"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
         gum style \
@@ -149,7 +371,7 @@ tasks:
           "back       - Retour")
 
         case "$CHOICE" in
-          *commit*) task ai:commit ;;
+          *commit*) task ai:git:commit ;;
           *tag*) task ai:git:tag ;;
           *review*) task ai:review ;;
           *explain*) task ai:explain ;;
@@ -164,11 +386,11 @@ tasks:
   # --------------------------------------------------------------------------
 
   hello:
-    desc: "Test du systeme de prompts - Dit bonjour"
-    deps: [_check-tools, _check-ollama]
+    desc: "Test du systeme Claude CLI"
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
-        gum style --foreground {{.PRIMARY}} "Test du systeme de prompts..."
+        gum style --foreground {{.PRIMARY}} "Test Claude CLI ({{.AI_PROVIDER}}/{{.AI_MODEL}})..."
         echo ""
 
         # Charger le prompt depuis fichier externe
@@ -181,28 +403,22 @@ tasks:
           exit 1
         fi
 
-        gum style --foreground {{.MUTED}} "Prompt: $PROMPT_FILE"
+        gum style --foreground {{.MUTED}} "Provider: {{.AI_PROVIDER}}"
         gum style --foreground {{.MUTED}} "Model: {{.AI_MODEL}}"
         gum style --foreground {{.MUTED}} "Lang: $AI_LANG"
         echo ""
 
         PROJECT_NAME=$(basename "$(pwd)")
         TEMPLATE=$(cat "$PROMPT_FILE")
+        PROMPT=$(echo "$TEMPLATE" | sed "s|__PROJECT__|$PROJECT_NAME|g")
 
-        gum spin --spinner dot --title "Appel Ollama..." -- sleep 1
+        gum spin --spinner dot --title "Appel IA..." -- sleep 1
 
-        RESPONSE=$(curl -s --connect-timeout 10 -m 30 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg project "$PROJECT_NAME" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__PROJECT__"; $project)),
-              stream: false
-            }')" \
-          | jq -r '.response // empty')
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+        fi
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de reponse de l'IA"
@@ -217,7 +433,7 @@ tasks:
           --padding "1 2" \
           "$RESPONSE"
         echo ""
-        gum style --foreground {{.SUCCESS}} " Systeme de prompts OK!"
+        gum style --foreground {{.SUCCESS}} " {{.AI_PROVIDER}}/{{.AI_MODEL}} OK!"
 
   # --------------------------------------------------------------------------
   # COMMIT INTERACTIF
@@ -226,7 +442,7 @@ tasks:
   commit:
     internal: true
     desc: "Générer un message de commit avec l'IA"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
         # Vérifier s'il y a des changements staged
@@ -260,7 +476,7 @@ tasks:
           fi
         fi
 
-        gum style --foreground {{.PRIMARY}} "Génération du message de commit..."
+        gum style --foreground {{.PRIMARY}} "Génération du message de commit ({{.AI_PROVIDER}}/{{.AI_MODEL}})..."
         echo ""
 
         # Récupérer le diff et contexte
@@ -271,39 +487,26 @@ tasks:
         # Limiter la taille du diff (max 4000 chars)
         DIFF_LIMITED=$(echo "$DIFF" | head -c 4000)
 
-        # Charger le prompt depuis fichier externe
+        # Construire le prompt via taskutil.py
         AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-        PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/commit.txt"
-        [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/commit.txt"
 
-        if [ ! -f "$PROMPT_FILE" ]; then
-          gum style --foreground {{.ERROR}} " Prompt non trouvé: $PROMPT_FILE"
-          exit 1
+        gum spin --spinner dot --title "Analyse en cours..." -- sleep 1
+
+        PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+          --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/commit.txt" \
+          --files "$FILES" \
+          --commits "$RECENT_COMMITS" \
+          --diff "$DIFF_LIMITED")
+
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
         fi
 
-        gum spin --spinner dot --title "Analyse en cours avec {{.AI_MODEL}}..." -- sleep 1
-
-        # Construire JSON avec substitutions via jq
-        TEMPLATE=$(cat "$PROMPT_FILE")
-        RESPONSE=$(curl -s --connect-timeout 10 -m 120 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg files "$FILES" \
-            --arg diff "$DIFF_LIMITED" \
-            --arg recent "$RECENT_COMMITS" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__FILES__"; $files) | gsub("__DIFF__"; $diff) | gsub("__RECENT_COMMITS__"; $recent)),
-              stream: false
-            }')" \
-          | jq -r '.response // empty' \
-          | head -5 \
-          | sed 's/^[[:space:]]*//' \
-          | sed 's/[[:space:]]*$//' \
-          | grep -v '^$' \
-          | head -1)
+        # Extraire commit message via taskutil.py
+        RESPONSE=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+          --pattern first-line --fallback "")
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
@@ -311,12 +514,8 @@ tasks:
         fi
 
         # Nettoyer la réponse
-        COMMIT_MSG=$(echo "$RESPONSE" | \
-          sed 's/^[\`\"]\{1,3\}//;s/[\`\"]\{1,3\}$//' | \
-          sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
-          tr '\n' '\r' | sed 's/\r\r\+/\n\n/g' | tr '\r' '\n' | \
-          sed '/^[[:space:]]*$/d' | \
-          head -n 10)
+        COMMIT_MSG=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py clean \
+          --strip-quotes --trim --collapse-newlines --max-lines 10)
 
         echo ""
         gum style \
@@ -357,41 +556,12 @@ tasks:
         esac
 
   # --------------------------------------------------------------------------
-  # GIT MENU
-  # --------------------------------------------------------------------------
-
-  git:
-    desc: "Menu Git - commit, pr, merge, branch, tag, main"
-    cmds:
-      - clear
-      - task: ui:header
-        vars: {TITLE: "AI:GIT - OUTILS GIT AVEC IA", COLOR: "{{.PRIMARY}}"}
-      - task: ui:spacer
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:main     - Workflow complet (commit + PR + merge)"}
-      - task: ui:spacer
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:commit   - Commit YOLO (auto add + commit + push)"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:pr       - Creer une Pull Request avec IA"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:merge    - Merger une Pull Request"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:branch   - Creer une branche (Conventional Commits)"}
-      - task: ui:info
-        vars: {TEXT: "  task ai:git:tag      - Creer un tag versionne (semver)"}
-      - task: ui:spacer
-      - task: ui:muted
-        vars: {TEXT: "  Provider: {{.AI_PROVIDER}} | Model: {{.AI_MODEL}}"}
-      - task: ui:spacer
-
-  # --------------------------------------------------------------------------
   # GIT:COMMIT (PUBLIC)
   # --------------------------------------------------------------------------
 
   git:commit:
     desc: "Commit YOLO - auto add + commit + push sans confirmation"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
         # 1. Auto-add si rien staged
@@ -400,57 +570,54 @@ tasks:
         FILES=$(git diff --cached --name-only)
         [ -z "$FILES" ] && { gum style --foreground {{.WARNING}} " Rien à commiter"; exit 0; }
 
-        # 2. Afficher fichiers
-        gum style --foreground {{.MUTED}} "Fichiers:"
-        echo "$FILES" | sed 's/^/  • /'
+        FILE_COUNT=$(echo "$FILES" | wc -l | tr -d ' ')
+        SCOPE=$(echo "$FILES" | python3 {{.ROOT_DIR}}/scripts/taskutil.py field --head 1 --delimiter "/" --index 0 --lowercase)
+
+        # 2. Afficher box avec fichiers
+        FILES_LIST=$(echo "$FILES" | python3 {{.ROOT_DIR}}/scripts/taskutil.py list --prefix "  • ")
+        gum style \
+          --border rounded \
+          --border-foreground {{.PRIMARY}} \
+          --padding "0 1" \
+          --margin "0" \
+          " Commit YOLO ({{.AI_PROVIDER}}/{{.AI_MODEL}})" \
+          "" \
+          "$FILE_COUNT fichier(s):" \
+          "$FILES_LIST"
         echo ""
 
-        # 3. Préparer contexte
+        # 3. Préparer contexte et prompt via taskutil.py
         DIFF=$(git diff --cached --no-color | head -c 4000)
-        SCOPE=$(echo "$FILES" | head -1 | cut -d'/' -f1 | tr '[:upper:]' '[:lower:]')
-
-        # 4. Générer commit message
-        gum style --foreground {{.PRIMARY}} "Génération..."
-
-        # Charger le prompt depuis fichier externe
         AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-        PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/commit-yolo.txt"
-        [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/commit-yolo.txt"
-        TEMPLATE=$(cat "$PROMPT_FILE" 2>/dev/null || echo "Generate a Conventional Commit: type(scope): description")
 
-        COMMIT_MSG=$(curl -s -m 60 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg files "$FILES" \
-            --arg diff "$DIFF" \
-            --arg scope "$SCOPE" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__FILES__"; $files) | gsub("__DIFF__"; $diff) | gsub("__SCOPE__"; $scope)),
-              stream: false,
-              options: {temperature: 0.2, num_predict: 80}
-            }')" \
-          | jq -r '.response // empty' \
-          | grep -oE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)\([a-zA-Z0-9_-]+\): .+' \
-          | head -1)
+        PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+          --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/commit-yolo.txt" \
+          --files "$FILES" \
+          --scope "$SCOPE" \
+          --diff "$DIFF")
 
-        # 5. Fallback si échec
-        [ -z "$COMMIT_MSG" ] && COMMIT_MSG="chore($SCOPE): update files"
+        # 4. Appel IA selon provider
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+        fi
+
+        # 5. Extraire commit message via taskutil.py
+        COMMIT_MSG=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+          --pattern conventional-commit \
+          --fallback "chore($SCOPE): update files")
 
         # 6. Commit + Push
-        gum style --border rounded --padding "0 1" --margin "0 2" "$COMMIT_MSG"
-        gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git commit -m \"$COMMIT_MSG\""
-        git commit -m "$COMMIT_MSG"
+        gum style --foreground {{.SUCCESS}} " $COMMIT_MSG"
+        git commit -m "$COMMIT_MSG" >/dev/null 2>&1
+        COMMIT_SHA=$(git rev-parse --short HEAD)
 
-        # Push avec upstream si nécessaire
         CURRENT_BRANCH=$(git branch --show-current)
-        gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git push -u origin $CURRENT_BRANCH"
-        if git push -u origin "$CURRENT_BRANCH" 2>&1; then
-          gum style --foreground {{.SUCCESS}} " Push OK"
+        if git push -u origin "$CURRENT_BRANCH" >/dev/null 2>&1; then
+          gum style --foreground {{.SUCCESS}} " Push OK → origin/$CURRENT_BRANCH ($COMMIT_SHA)"
         else
-          gum style --foreground {{.WARNING}} " Push échoué"
+          gum style --foreground {{.WARNING}} " Push échoué (commit local: $COMMIT_SHA)"
         fi
 
   # --------------------------------------------------------------------------
@@ -459,7 +626,7 @@ tasks:
 
   git:pr:
     desc: "Créer une Pull Request avec titre/body générés par IA"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
         # Vérifier que gh est installé
@@ -490,8 +657,8 @@ tasks:
 
         # Vérifier qu'on n'est pas sur la branche principale
         if [ "$CURRENT_BRANCH" = "$BASE_BRANCH" ]; then
-          gum style --foreground {{.ERROR}} " Tu es sur $BASE_BRANCH, crée d'abord une branche feature"
-          exit 1
+          gum style --foreground {{.WARNING}} " Tu es sur $BASE_BRANCH, crée d'abord une branche feature"
+          exit 0
         fi
 
         # Vérifier s'il y a des changements non commités
@@ -512,7 +679,7 @@ tasks:
           echo ""
         fi
 
-        gum style --foreground {{.PRIMARY}} "Création de Pull Request"
+        gum style --foreground {{.PRIMARY}} "Création de Pull Request ({{.AI_PROVIDER}}/{{.AI_MODEL}})"
         gum style --foreground {{.MUTED}} "Branche: $CURRENT_BRANCH → $BASE_BRANCH"
         echo ""
 
@@ -538,50 +705,34 @@ tasks:
         echo ""
 
         gum style --foreground {{.PRIMARY}} "Génération du titre et description..."
-
-        # Charger le prompt depuis le fichier externe
         AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-        PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/pr.txt"
-        [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/pr.txt"
-        if [ ! -f "$PROMPT_FILE" ]; then
-          gum style --foreground {{.ERROR}} " Fichier prompt non trouvé: $PROMPT_FILE"
-          exit 1
+
+        # Construire le prompt via taskutil.py
+        PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+          --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/pr.txt" \
+          --files "$FILES_CHANGED" \
+          --commits "$COMMITS_FULL" \
+          --stats "$DIFF_STAT")
+
+        # Appel IA selon provider
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
         fi
-
-        # Construire JSON avec substitutions via jq
-        TEMPLATE=$(cat "$PROMPT_FILE")
-        JSON=$(jq -n \
-          --arg model "{{.AI_MODEL}}" \
-          --arg template "$TEMPLATE" \
-          --arg commits "$COMMITS_FULL" \
-          --arg files "$FILES_CHANGED" \
-          --arg stats "$DIFF_STAT" \
-          '{
-            model: $model,
-            prompt: ($template | gsub("__COMMITS__"; $commits) | gsub("__FILES__"; $files) | gsub("__STATS__"; $stats)),
-            stream: false
-          }')
-
-        RESPONSE=$(curl -s --connect-timeout 10 -m 180 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$JSON" | jq -r '.response // empty')
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
           exit 1
         fi
 
-        # Extraire titre et body
-        PR_TITLE=$(echo "$RESPONSE" | grep -E "^TITLE:" | sed 's/^TITLE:[[:space:]]*//' | head -1)
-        PR_BODY=$(echo "$RESPONSE" | sed -n '/^---$/,$p' | tail -n +2)
-
-        # Fallback si pas de titre trouvé
-        if [ -z "$PR_TITLE" ]; then
-          PR_TITLE="feat($CURRENT_BRANCH): $(echo "$COMMITS" | head -1 | cut -d' ' -f2-)"
-        fi
-        if [ -z "$PR_BODY" ]; then
-          PR_BODY="$RESPONSE"
-        fi
+        # Extraire titre et body via taskutil.py
+        PR_TITLE=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+          --pattern pr-title \
+          --fallback "feat($CURRENT_BRANCH): $(echo "$COMMITS" | head -1 | cut -d' ' -f2-)")
+        PR_BODY=$(echo "$RESPONSE" | python3 {{.ROOT_DIR}}/scripts/taskutil.py extract \
+          --pattern pr-body \
+          --fallback "$RESPONSE")
 
         # Afficher le résultat
         echo ""
@@ -638,178 +789,6 @@ tasks:
             gum style --foreground {{.MUTED}} " Annulé"
             ;;
         esac
-
-  # --------------------------------------------------------------------------
-  # GIT:MAIN (PUBLIC) - Workflow complet fin de sprint
-  # --------------------------------------------------------------------------
-
-  git:main:
-    desc: "Workflow complet: commit + PR + merge (fin de sprint)"
-    deps: [_check-tools, _check-ollama]
-    cmds:
-      - |
-        gum style --foreground {{.PRIMARY}} --bold "━━━ WORKFLOW FIN DE SPRINT ━━━"
-        echo ""
-
-        # Vérifier que gh est installé et authentifié
-        if ! command -v gh &>/dev/null; then
-          gum style --foreground {{.ERROR}} " GitHub CLI (gh) non installé"
-          exit 1
-        fi
-        if ! gh auth status &>/dev/null; then
-          gum style --foreground {{.ERROR}} " GitHub CLI non authentifié"
-          exit 1
-        fi
-
-        CURRENT_BRANCH=$(git branch --show-current)
-
-        # Détecter la branche principale
-        if git show-ref --verify --quiet refs/heads/main; then
-          BASE_BRANCH="main"
-        elif git show-ref --verify --quiet refs/heads/master; then
-          BASE_BRANCH="master"
-        else
-          BASE_BRANCH="main"
-        fi
-
-        # Vérifier qu'on n'est pas sur main/master
-        if [ "$CURRENT_BRANCH" = "$BASE_BRANCH" ]; then
-          gum style --foreground {{.ERROR}} " Tu es sur $BASE_BRANCH - crée d'abord une branche feature"
-          exit 1
-        fi
-
-        gum style --foreground {{.MUTED}} "Branche: $CURRENT_BRANCH → $BASE_BRANCH"
-        echo ""
-
-        # =====================================================================
-        # ÉTAPE 1: COMMIT (force)
-        # =====================================================================
-        gum style --foreground {{.PRIMARY}} "┌─ ÉTAPE 1/3: COMMIT"
-
-        # Vérifier s'il y a des changements
-        MODIFIED=$(git diff --name-only 2>/dev/null)
-        STAGED=$(git diff --cached --name-only 2>/dev/null)
-        UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null)
-
-        if [ -n "$MODIFIED" ] || [ -n "$STAGED" ] || [ -n "$UNTRACKED" ]; then
-          # Auto-add si rien staged
-          [ -z "$(git diff --cached --name-only)" ] && git add . 2>/dev/null
-
-          FILES=$(git diff --cached --name-only)
-          FILE_COUNT=$(echo "$FILES" | wc -l | tr -d ' ')
-          gum style --foreground {{.MUTED}} "│  $FILE_COUNT fichier(s) à commiter"
-
-          # Générer commit message
-          DIFF=$(git diff --cached --no-color | head -c 4000)
-          SCOPE=$(echo "$FILES" | head -1 | cut -d'/' -f1 | tr '[:upper:]' '[:lower:]')
-
-          AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-          PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/commit-yolo.txt"
-          [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/commit-yolo.txt"
-          TEMPLATE=$(cat "$PROMPT_FILE" 2>/dev/null || echo "Generate a Conventional Commit: type(scope): description")
-
-          COMMIT_MSG=$(curl -s -m 60 {{.OLLAMA_HOST}}/api/generate \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg model "{{.AI_MODEL}}" \
-              --arg template "$TEMPLATE" \
-              --arg files "$FILES" \
-              --arg diff "$DIFF" \
-              --arg scope "$SCOPE" \
-              '{
-                model: $model,
-                prompt: ($template | gsub("__FILES__"; $files) | gsub("__DIFF__"; $diff) | gsub("__SCOPE__"; $scope)),
-                stream: false,
-                options: {temperature: 0.2, num_predict: 80}
-              }')" \
-            | jq -r '.response // empty' \
-            | grep -oE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)\([a-zA-Z0-9_-]+\): .+' \
-            | head -1)
-
-          [ -z "$COMMIT_MSG" ] && COMMIT_MSG="chore($SCOPE): update files"
-
-          gum style --foreground {{.MUTED}} "│  Message: $COMMIT_MSG"
-          git commit -m "$COMMIT_MSG" >/dev/null 2>&1
-          git push -u origin "$CURRENT_BRANCH" >/dev/null 2>&1
-          gum style --foreground {{.SUCCESS}} "└─  Commit + Push OK"
-        else
-          gum style --foreground {{.SUCCESS}} "└─  Rien à commiter"
-        fi
-        echo ""
-
-        # =====================================================================
-        # ÉTAPE 2: PULL REQUEST (force)
-        # =====================================================================
-        gum style --foreground {{.PRIMARY}} "┌─ ÉTAPE 2/3: PULL REQUEST"
-
-        # Vérifier si une PR existe déjà
-        EXISTING_PR=$(gh pr list --head "$CURRENT_BRANCH" --state open --json number,url --jq '.[0]' 2>/dev/null)
-
-        if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
-          PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.number')
-          PR_URL=$(echo "$EXISTING_PR" | jq -r '.url')
-          gum style --foreground {{.WARNING}} "│  PR #$PR_NUMBER existe déjà"
-          gum style --foreground {{.SUCCESS}} "└─  $PR_URL"
-        else
-          # Récupérer contexte pour générer PR
-          COMMITS_FULL=$(git log $BASE_BRANCH..$CURRENT_BRANCH --pretty=format:"%s%n%b" 2>/dev/null | head -c 3000)
-          FILES_CHANGED=$(git diff $BASE_BRANCH..$CURRENT_BRANCH --name-only 2>/dev/null)
-          DIFF_STAT=$(git diff $BASE_BRANCH..$CURRENT_BRANCH --stat 2>/dev/null | tail -5)
-
-          # Charger prompt PR
-          AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-          PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/pr.txt"
-          [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/pr.txt"
-
-          if [ -f "$PROMPT_FILE" ]; then
-            TEMPLATE=$(cat "$PROMPT_FILE")
-            RESPONSE=$(curl -s -m 120 {{.OLLAMA_HOST}}/api/generate \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n \
-                --arg model "{{.AI_MODEL}}" \
-                --arg template "$TEMPLATE" \
-                --arg commits "$COMMITS_FULL" \
-                --arg files "$FILES_CHANGED" \
-                --arg stats "$DIFF_STAT" \
-                '{
-                  model: $model,
-                  prompt: ($template | gsub("__COMMITS__"; $commits) | gsub("__FILES__"; $files) | gsub("__STATS__"; $stats)),
-                  stream: false
-                }')" | jq -r '.response // empty')
-
-            PR_TITLE=$(echo "$RESPONSE" | grep -E "^TITLE:" | sed 's/^TITLE:[[:space:]]*//' | head -1)
-            PR_BODY=$(echo "$RESPONSE" | sed -n '/^---$/,$p' | tail -n +2)
-          fi
-
-          # Fallback
-          [ -z "$PR_TITLE" ] && PR_TITLE="feat($CURRENT_BRANCH): merge to $BASE_BRANCH"
-          [ -z "$PR_BODY" ] && PR_BODY="Auto-generated PR from branch $CURRENT_BRANCH"
-
-          gum style --foreground {{.MUTED}} "│  Titre: $PR_TITLE"
-
-          # Créer la PR
-          PR_OUTPUT=$(gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base "$BASE_BRANCH" 2>&1)
-
-          if [ $? -eq 0 ]; then
-            PR_NUMBER=$(echo "$PR_OUTPUT" | grep -oE '[0-9]+$' | tail -1)
-            gum style --foreground {{.SUCCESS}} "└─  PR #$PR_NUMBER créée: $PR_OUTPUT"
-          else
-            gum style --foreground {{.ERROR}} "└─  Erreur: $PR_OUTPUT"
-            exit 1
-          fi
-        fi
-        echo ""
-
-        # =====================================================================
-        # ÉTAPE 3: MERGE (interactif)
-        # =====================================================================
-        gum style --foreground {{.PRIMARY}} "┌─ ÉTAPE 3/3: MERGE"
-        gum style --foreground {{.MUTED}} "│  Lancement du merge interactif..."
-        gum style --foreground {{.MUTED}} "└─"
-        echo ""
-
-        # Lancer le merge interactif
-        task ai:git:merge
 
   # --------------------------------------------------------------------------
   # GIT:MERGE (PUBLIC)
@@ -1024,9 +1003,14 @@ tasks:
           # Mettre à jour la branche locale
           echo ""
           gum style --foreground {{.PRIMARY}} "Mise à jour de la branche principale..."
-          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git checkout main && git pull"
-          git checkout main 2>/dev/null || git checkout master 2>/dev/null
-          git pull
+          if git checkout main 2>/dev/null; then
+            TARGET_BRANCH="main"
+          else
+            git checkout master 2>/dev/null
+            TARGET_BRANCH="master"
+          fi
+          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git pull origin $TARGET_BRANCH"
+          git pull origin "$TARGET_BRANCH"
           gum style --foreground {{.SUCCESS}} " Branche principale à jour"
         else
           gum style --foreground {{.ERROR}} " Erreur lors du merge"
@@ -1038,7 +1022,7 @@ tasks:
 
   review:
     desc: "Review du code avec l'IA (staged ou unstaged)"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
         # Déterminer quoi reviewer
@@ -1053,37 +1037,24 @@ tasks:
           exit 1
         fi
 
-        gum style --foreground {{.PRIMARY}} "Review du code ($SCOPE)..."
+        gum style --foreground {{.PRIMARY}} "Review du code ($SCOPE) - {{.AI_PROVIDER}}/{{.AI_MODEL}}..."
         echo ""
 
         DIFF_LIMITED=$(echo "$DIFF" | head -c 6000)
-
-        # Charger le prompt depuis le fichier externe
         AI_LANG="${AI_LANG:-{{.AI_LANG}}}"
-        PROMPT_FILE="{{.ROOT_DIR}}/prompts/${AI_LANG}/review.txt"
-        [ ! -f "$PROMPT_FILE" ] && PROMPT_FILE="{{.ROOT_DIR}}/prompts/en/review.txt"
-        if [ ! -f "$PROMPT_FILE" ]; then
-          gum style --foreground {{.ERROR}} " Fichier prompt non trouvé: $PROMPT_FILE"
-          exit 1
+
+        gum spin --spinner dot --title "Analyse en cours..." -- sleep 1
+
+        # Construire le prompt via taskutil.py
+        PROMPT=$(python3 {{.ROOT_DIR}}/scripts/taskutil.py prompt \
+          --template "{{.ROOT_DIR}}/prompts/${AI_LANG}/review.txt" \
+          --diff "$DIFF_LIMITED")
+
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
         fi
-
-        gum spin --spinner dot --title "Analyse avec {{.AI_MODEL_REVIEW}}..." -- sleep 1
-
-        # Construire JSON avec substitutions via jq (remplace Perl)
-        TEMPLATE=$(cat "$PROMPT_FILE")
-        JSON=$(jq -n \
-          --arg model "{{.AI_MODEL_REVIEW}}" \
-          --arg template "$TEMPLATE" \
-          --arg diff "$DIFF_LIMITED" \
-          '{
-            model: $model,
-            prompt: ($template | gsub("__DIFF__"; $diff)),
-            stream: false
-          }')
-
-        RESPONSE=$(curl -s --connect-timeout 10 -m 180 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$JSON" | jq -r '.response // empty')
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
@@ -1107,10 +1078,10 @@ tasks:
 
   explain:
     desc: "Expliquer du code selectionne"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
-        gum style --foreground {{.PRIMARY}} "Expliquer du code"
+        gum style --foreground {{.PRIMARY}} "Expliquer du code ({{.AI_PROVIDER}}/{{.AI_MODEL}})"
         echo ""
 
         FILE=$(gum file --height 15 .)
@@ -1133,19 +1104,14 @@ tasks:
 
         gum spin --spinner dot --title "Analyse en cours..." -- sleep 1
 
-        RESPONSE=$(curl -s --connect-timeout 10 -m 120 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg code "$CODE" \
-            --arg file "$FILE" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__CODE__"; $code) | gsub("__FILE__"; $file)),
-              stream: false
-            }')" \
-          | jq -r '.response // empty')
+        PROMPT=$(echo "$TEMPLATE" | sed "s|__FILE__|$FILE|g")
+        PROMPT=$(printf "%s\n\nCODE:\n%s" "$PROMPT" "$CODE")
+
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+        fi
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
@@ -1161,10 +1127,10 @@ tasks:
 
   docs:
     desc: "Generer de la documentation (JSDoc/README/API)"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
-        gum style --foreground {{.PRIMARY}} "Générer de la documentation"
+        gum style --foreground {{.PRIMARY}} "Générer de la documentation ({{.AI_PROVIDER}}/{{.AI_MODEL}})"
         echo ""
 
         FILE=$(gum file --height 15 .)
@@ -1197,19 +1163,14 @@ tasks:
 
         gum spin --spinner dot --title "Génération de la documentation..." -- sleep 1
 
-        RESPONSE=$(curl -s --connect-timeout 10 -m 180 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg code "$CODE" \
-            --arg file "$FILE" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__CODE__"; $code) | gsub("__FILE__"; $file)),
-              stream: false
-            }')" \
-          | jq -r '.response // empty')
+        PROMPT=$(echo "$TEMPLATE" | sed "s|__FILE__|$FILE|g")
+        PROMPT=$(printf "%s\n\nCODE:\n%s" "$PROMPT" "$CODE")
+
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+        fi
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
@@ -1246,10 +1207,10 @@ tasks:
 
   test:
     desc: "Generer des tests (Vitest/Jest/Playwright)"
-    deps: [_check-tools, _check-ollama]
+    deps: [_check-tools, _check-ai]
     cmds:
       - |
-        gum style --foreground {{.PRIMARY}} "Générer des tests"
+        gum style --foreground {{.PRIMARY}} "Générer des tests ({{.AI_PROVIDER}}/{{.AI_MODEL}})"
         echo ""
 
         FILE=$(gum file --height 15 .)
@@ -1277,20 +1238,14 @@ tasks:
 
         gum spin --spinner dot --title "Génération des tests..." -- sleep 1
 
-        RESPONSE=$(curl -s --connect-timeout 10 -m 180 {{.OLLAMA_HOST}}/api/generate \
-          -H "Content-Type: application/json" \
-          -d "$(jq -n \
-            --arg model "{{.AI_MODEL}}" \
-            --arg template "$TEMPLATE" \
-            --arg code "$CODE" \
-            --arg file "$FILE" \
-            --arg framework "$FRAMEWORK" \
-            '{
-              model: $model,
-              prompt: ($template | gsub("__CODE__"; $code) | gsub("__FILE__"; $file) | gsub("__FRAMEWORK__"; $framework)),
-              stream: false
-            }')" \
-          | jq -r '.response // empty')
+        PROMPT=$(echo "$TEMPLATE" | sed "s|__FILE__|$FILE|g" | sed "s|__FRAMEWORK__|$FRAMEWORK|g")
+        PROMPT=$(printf "%s\n\nCODE:\n%s" "$PROMPT" "$CODE")
+
+        if [ "{{.AI_PROVIDER}}" = "claude" ]; then
+          RESPONSE=$(claude -p "$PROMPT" --model {{.AI_MODEL}} 2>/dev/null || true)
+        else
+          RESPONSE=$(echo "$PROMPT" | ollama run {{.AI_MODEL}} 2>/dev/null || true)
+        fi
 
         if [ -z "$RESPONSE" ]; then
           gum style --foreground {{.ERROR}} " Pas de réponse de l'IA"
@@ -1328,21 +1283,26 @@ tasks:
         echo ""
         echo "Provider:      {{.AI_PROVIDER}}"
         echo "Model:         {{.AI_MODEL}}"
-        echo "Model Review:  {{.AI_MODEL_REVIEW}}"
-        echo "Ollama Host:   {{.OLLAMA_HOST}}"
         echo "Language:      {{.AI_LANG}}"
         echo ""
 
-        gum style --foreground {{.MUTED}} "Pour modifier, exporte les variables dans ton shell/.envrc:"
+        gum style --foreground {{.MUTED}} "Pour modifier, exporte les variables:"
         echo ""
-        echo "  export AI_MODEL=qwen2.5-coder:7b"
-        echo "  export AI_LANG=en"
+        gum style --foreground {{.SUCCESS}} "# Claude (défaut)"
+        echo "  export AI_PROVIDER=claude"
+        echo "  export AI_MODEL=haiku    # ou sonnet, opus"
+        echo ""
+        gum style --foreground {{.WARNING}} "# Ollama (optionnel)"
+        echo "  export AI_PROVIDER=ollama"
+        echo "  export AI_MODEL=qwen2.5-coder:14b"
         echo ""
 
-        if gum confirm "Voir les modèles Ollama disponibles ?"; then
-          echo ""
-          gum style --foreground {{.PRIMARY}} "Modèles installés:"
-          curl -s {{.OLLAMA_HOST}}/api/tags | jq -r '.models[]? | "  \(.name) (\(.size / 1024 / 1024 / 1024 | floor)GB)"' 2>/dev/null || echo "  Impossible de récupérer la liste"
+        if [ "{{.AI_PROVIDER}}" != "claude" ]; then
+          if gum confirm "Voir les modèles Ollama disponibles ?"; then
+            echo ""
+            gum style --foreground {{.PRIMARY}} "Modèles installés:"
+            ollama list 2>/dev/null | tail -n +2 | awk '{print "  " $1}' || echo "  Impossible de récupérer la liste"
+          fi
         fi
 
   # --------------------------------------------------------------------------
@@ -1395,8 +1355,8 @@ tasks:
     deps: [_check-tools]
     cmds:
       - |
-        if curl -s {{.OLLAMA_HOST}}/api/tags > /dev/null 2>&1; then
-          gum style --foreground {{.WARNING}} "  Ollama est déjà en cours d'exécution sur {{.OLLAMA_HOST}}"
+        if ollama list &>/dev/null; then
+          gum style --foreground {{.WARNING}} "  Ollama est déjà en cours d'exécution"
           exit 0
         fi
 
@@ -1406,8 +1366,8 @@ tasks:
 
         gum spin --spinner dot --title "Attente du démarrage..." -- sleep 2
 
-        if curl -s {{.OLLAMA_HOST}}/api/tags > /dev/null 2>&1; then
-          gum style --foreground {{.SUCCESS}} " Ollama démarré sur {{.OLLAMA_HOST}}"
+        if ollama list &>/dev/null; then
+          gum style --foreground {{.SUCCESS}} " Ollama démarré"
         else
           gum style --foreground {{.ERROR}} " Échec du démarrage d'Ollama"
           exit 1
@@ -1418,33 +1378,33 @@ tasks:
     deps: [_check-tools]
     cmds:
       - |
-        if ! curl -s {{.OLLAMA_HOST}}/api/tags > /dev/null 2>&1; then
+        if ! ollama list &>/dev/null; then
           gum style --foreground {{.WARNING}} "  Ollama n'est pas en cours d'exécution"
           exit 0
         fi
 
         gum style --foreground {{.PRIMARY}} "Arrêt d'Ollama..."
 
-        OLLAMA_PID=$(lsof -t -i :11434 2>/dev/null || true)
+        OLLAMA_PID=$(pgrep -f "ollama serve" 2>/dev/null || lsof -t -i :11434 2>/dev/null || true)
 
         if [ -n "$OLLAMA_PID" ]; then
           gum style --foreground {{.MUTED}} "PID trouvé: $OLLAMA_PID"
-          kill -KILL $OLLAMA_PID 2>/dev/null || true
+          kill -TERM $OLLAMA_PID 2>/dev/null || true
           gum spin --spinner dot --title "Arrêt en cours..." -- sleep 2
 
-          if ! curl -s {{.OLLAMA_HOST}}/api/tags > /dev/null 2>&1; then
+          if ! ollama list &>/dev/null; then
             gum style --foreground {{.SUCCESS}} " Ollama arrêté"
           else
             kill -KILL $OLLAMA_PID 2>/dev/null || true
             sleep 1
-            if ! curl -s {{.OLLAMA_HOST}}/api/tags > /dev/null 2>&1; then
+            if ! ollama list &>/dev/null; then
               gum style --foreground {{.SUCCESS}} " Ollama arrêté (force kill)"
             else
               gum style --foreground {{.ERROR}} " Impossible d'arrêter Ollama"
             fi
           fi
         else
-          gum style --foreground {{.WARNING}} "  Aucun processus trouvé sur le port 11434"
+          gum style --foreground {{.WARNING}} "  Aucun processus Ollama trouvé"
         fi
 
   # --------------------------------------------------------------------------
@@ -1460,8 +1420,8 @@ tasks:
 
         # Vérifier qu'un nom est fourni
         if [ -z "$NAME" ]; then
-          gum style --foreground {{.ERROR}} " Usage: task ai:git:branch -- nom-de-la-branche"
-          gum style --foreground {{.MUTED}} "   Exemple: task ai:git:branch -- add-user-auth"
+          gum style --foreground {{.ERROR}} " Usage: task ai:branch -- nom-de-la-branche"
+          gum style --foreground {{.MUTED}} "   Exemple: task ai:branch -- add-user-auth"
           exit 1
         fi
 
@@ -1492,7 +1452,7 @@ tasks:
         # Extraire le type (premier mot)
         TYPE_KEY=$(echo "$TYPE" | awk '{print $1}')
 
-        # Mapper vers le préfixe de branche
+        # Mapper vers les préfixes de branche
         case "$TYPE_KEY" in
           feat)     PREFIX="feature" ;;
           fix)      PREFIX="fix" ;;
@@ -1507,7 +1467,6 @@ tasks:
           *)        PREFIX="$TYPE_KEY" ;;
         esac
 
-        # Construire le nom complet
         BRANCH_NAME="${PREFIX}/${NAME}"
 
         # Vérifier que la branche n'existe pas déjà
@@ -1521,26 +1480,22 @@ tasks:
           exit 1
         fi
 
-        # Afficher le récapitulatif
         CURRENT_BRANCH=$(git branch --show-current)
         echo ""
         gum style --foreground {{.MUTED}} "  Branche actuelle: $CURRENT_BRANCH"
         gum style --foreground {{.SUCCESS}} "  Nouvelle branche: $BRANCH_NAME"
         echo ""
 
-        # Demander confirmation
         if ! gum confirm "Créer et pusher cette branche?"; then
           gum style --foreground {{.MUTED}} " Annulé"
           exit 0
         fi
 
-        # Créer la branche
         echo ""
         gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git checkout -b $BRANCH_NAME"
         gum spin --spinner dot --title "Création de la branche..." -- git checkout -b "$BRANCH_NAME"
         gum style --foreground {{.SUCCESS}} " Branche '$BRANCH_NAME' créée"
 
-        # Push vers origin
         gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git push -u origin $BRANCH_NAME"
         gum spin --spinner dot --title "Push vers origin..." -- git push -u origin "$BRANCH_NAME"
         gum style --foreground {{.SUCCESS}} " Branche pushée sur origin"
@@ -1553,187 +1508,130 @@ tasks:
   # --------------------------------------------------------------------------
 
   git:tag:
-    desc: "Créer un tag + release - Usage: task ai:git:tag [-- v1.0.0]"
+    desc: "Creer un tag versionne (semver)"
     deps: [_check-tools]
     cmds:
       - |
-        gum style --foreground {{.PRIMARY}} "Création de Tag"
-        echo ""
+        # Construire le contenu de la box
+        BOX_CONTENT=""
 
-        # 0. Vérifier si version fournie en argument
-        VERSION_ARG="{{.CLI_ARGS}}"
-
-        if [ -n "$VERSION_ARG" ]; then
-          # Ajouter 'v' si manquant
-          [[ "$VERSION_ARG" != v* ]] && VERSION_ARG="v$VERSION_ARG"
-          FINAL_VERSION="$VERSION_ARG"
-
-          # Vérifier format semver basique
-          if ! echo "$FINAL_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
-            gum style --foreground {{.ERROR}} " Format invalide: $FINAL_VERSION"
-            gum style --foreground {{.MUTED}} "   Format attendu: v1.0.0"
-            exit 1
-          fi
-
-          gum style --foreground {{.PRIMARY}} "Version spécifiée: $FINAL_VERSION"
-
-          # Vérifier que le tag n'existe pas
-          if git rev-parse "$FINAL_VERSION" >/dev/null 2>&1; then
-            gum style --foreground {{.ERROR}} " Le tag $FINAL_VERSION existe déjà!"
-            exit 1
-          fi
-
-          # Créer le tag directement avec message par défaut
-          echo ""
-          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-            "$ git tag -a $FINAL_VERSION -m \"Release $FINAL_VERSION\""
-          git tag -a "$FINAL_VERSION" -m "Release $FINAL_VERSION"
-
-          gum style --foreground {{.SUCCESS}} " Tag $FINAL_VERSION créé!"
-          echo ""
-
-          # Proposer de pusher
-          if gum confirm "Pusher le tag sur origin?"; then
-            gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-              "$ git push origin $FINAL_VERSION"
-            git push origin "$FINAL_VERSION"
-            gum style --foreground {{.SUCCESS}} " Tag pushé sur origin"
-
-            # Créer GitHub Release automatiquement (mode direct uniquement)
-            echo ""
-            if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
-              gum style --foreground {{.PRIMARY}} "Création de la GitHub Release..."
-
-              # Générer les notes de release (commits depuis le tag précédent)
-              PREV_TAG=$(git describe --tags --abbrev=0 "$FINAL_VERSION^" 2>/dev/null || echo "")
-              if [ -n "$PREV_TAG" ]; then
-                RELEASE_NOTES=$(git log $PREV_TAG..$FINAL_VERSION --pretty=format:"- %s" 2>/dev/null)
-              else
-                RELEASE_NOTES=$(git log --pretty=format:"- %s" -10 2>/dev/null)
-              fi
-
-              gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-                "$ gh release create $FINAL_VERSION --title \"$FINAL_VERSION\""
-
-              if gh release create "$FINAL_VERSION" --title "$FINAL_VERSION" --notes "$RELEASE_NOTES" 2>/dev/null; then
-                gum style --foreground {{.SUCCESS}} " Release $FINAL_VERSION créée!"
-              else
-                gum style --foreground {{.WARNING}} " Release non créée (tag pushé avec succès)"
-              fi
-            else
-              gum style --foreground {{.MUTED}} "GitHub CLI non disponible - release non créée"
-            fi
-          else
-            gum style --foreground {{.MUTED}} "Tag créé localement. Pour pusher plus tard:"
-            gum style --foreground {{.MUTED}} "  git push origin $FINAL_VERSION"
-          fi
-
-          exit 0
+        # 3 dernières releases
+        LAST_TAGS=$(git tag --sort=-version:refname 2>/dev/null | head -3)
+        if [ -n "$LAST_TAGS" ]; then
+          BOX_CONTENT=" 3 dernières releases:\n"
+          while read tag; do
+            TAG_DATE=$(git log -1 --format="%ci" "$tag" 2>/dev/null | cut -d' ' -f1)
+            BOX_CONTENT="${BOX_CONTENT}    ${tag}  (${TAG_DATE})\n"
+          done <<< "$LAST_TAGS"
+          BOX_CONTENT="${BOX_CONTENT}\n"
+        else
+          BOX_CONTENT="  Aucun tag existant\n\n"
         fi
 
-        # 1. Afficher le dernier commit (mode interactif)
-        LAST_COMMIT_FULL=$(git log -1 --format="%h %s")
+        # Dernier commit
+        LAST_COMMIT=$(git log -1 --format="%h %s" 2>/dev/null)
+        if [ -n "$LAST_COMMIT" ]; then
+          BOX_CONTENT="${BOX_CONTENT}Dernier commit:\n  ${LAST_COMMIT}\n\n"
+        fi
 
-        gum style --foreground {{.MUTED}} "Dernier commit:"
-        gum style --border rounded --border-foreground {{.MUTED}} --padding "0 1" --margin "0 2" "$LAST_COMMIT_FULL"
-        echo ""
-
-        # 2. Récupérer le dernier tag
+        # Récupérer le dernier tag et analyser
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
         if [ -z "$LAST_TAG" ]; then
-          gum style --foreground {{.WARNING}} "  Aucun tag existant"
-          SUGGESTED_VERSION="v0.1.0"
-          COMMIT_COUNT="tous"
+          SUGGESTED_VERSION="0.1.0"
+          BOX_CONTENT="${BOX_CONTENT}Suggestion: v${SUGGESTED_VERSION}"
         else
-          gum style --foreground {{.MUTED}} "Dernier tag: $LAST_TAG"
+          # Compter les commits depuis le dernier tag
+          COMMIT_COUNT=$(git rev-list "$LAST_TAG..HEAD" --count 2>/dev/null || echo "0")
+          BOX_CONTENT="${BOX_CONTENT}Dernier tag: ${LAST_TAG}\n"
+          BOX_CONTENT="${BOX_CONTENT}Commits depuis: ${COMMIT_COUNT}\n\n"
 
-          # 3. Compter les commits depuis le dernier tag
-          COMMIT_COUNT=$(git rev-list $LAST_TAG..HEAD --count)
-          gum style --foreground {{.MUTED}} "Commits depuis: $COMMIT_COUNT"
+          # Analyser les commits pour suggérer le type de bump
+          COMMITS=$(git log "$LAST_TAG..HEAD" --format="%s" 2>/dev/null)
+          FEAT_COUNT=$(echo "$COMMITS" | grep -cE "^feat(\(|:)" 2>/dev/null || echo "0")
+          FIX_COUNT=$(echo "$COMMITS" | grep -cE "^fix(\(|:)" 2>/dev/null || echo "0")
+          BREAKING=$(echo "$COMMITS" | grep -ciE "BREAKING CHANGE|^[a-z]+(\([^)]*\))?!:" 2>/dev/null || echo "0")
 
-          if [ "$COMMIT_COUNT" -eq 0 ]; then
-            gum style --foreground {{.WARNING}} "  Aucun commit depuis $LAST_TAG"
-            if ! gum confirm "Créer quand même un nouveau tag?"; then
-              exit 0
-            fi
-          fi
-          echo ""
+          BOX_CONTENT="${BOX_CONTENT}Analyse des commits:\n"
+          BOX_CONTENT="${BOX_CONTENT}  - ${FEAT_COUNT} feat (fonctionnalités)\n"
+          BOX_CONTENT="${BOX_CONTENT}  - ${FIX_COUNT} fix (corrections)\n"
+          [ "$BREAKING" -gt 0 ] && BOX_CONTENT="${BOX_CONTENT}  - ${BREAKING} BREAKING CHANGE(S)!\n"
+          BOX_CONTENT="${BOX_CONTENT}\n"
 
-          # 4. Analyser les types de commits
-          COMMITS=$(git log $LAST_TAG..HEAD --format="%s" 2>/dev/null)
-
-          FEAT_COUNT=$(echo "$COMMITS" | grep -cE "^feat(\(|:)" || echo "0")
-          FIX_COUNT=$(echo "$COMMITS" | grep -cE "^fix(\(|:)" || echo "0")
-          BREAKING=$(echo "$COMMITS" | grep -ciE "BREAKING CHANGE|^[a-z]+(\([^)]*\))?!:" || echo "0")
-
-          gum style --foreground {{.MUTED}} "Analyse des commits:"
-          gum style --foreground {{.SUCCESS}} "  • $FEAT_COUNT feat (fonctionnalités)"
-          gum style --foreground {{.WARNING}} "  • $FIX_COUNT fix (corrections)"
-          [ "$BREAKING" -gt 0 ] && gum style --foreground {{.ERROR}} "  • $BREAKING BREAKING CHANGE(S)!"
-          echo ""
-
-          # 5. Extraire version actuelle et calculer la nouvelle
-          VERSION=${LAST_TAG#v}  # Enlever le 'v' prefix
+          # Parser la version actuelle
+          VERSION=${LAST_TAG#v}
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f2)
           PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-          # Déterminer le bump
+          # Suggérer le bump
           if [ "$BREAKING" -gt 0 ]; then
-            BUMP="major"
+            BUMP="MAJOR"
             NEW_MAJOR=$((MAJOR + 1))
             NEW_MINOR=0
             NEW_PATCH=0
           elif [ "$FEAT_COUNT" -gt 0 ]; then
-            BUMP="minor"
+            BUMP="MINOR"
             NEW_MAJOR=$MAJOR
             NEW_MINOR=$((MINOR + 1))
             NEW_PATCH=0
           else
-            BUMP="patch"
+            BUMP="PATCH"
             NEW_MAJOR=$MAJOR
             NEW_MINOR=$MINOR
             NEW_PATCH=$((PATCH + 1))
           fi
 
-          SUGGESTED_VERSION="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          SUGGESTED_VERSION="${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          BOX_CONTENT="${BOX_CONTENT}Suggestion: ${BUMP} bump → v${SUGGESTED_VERSION}"
 
-          gum style --foreground {{.PRIMARY}} "Suggestion: $(echo $BUMP | tr '[:lower:]' '[:upper:]') bump → $SUGGESTED_VERSION"
+          # Vérifier si 0 commits
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo ""
+            gum style --foreground {{.PRIMARY}} --bold " Création de Tag"
+            echo -e "$BOX_CONTENT" | gum style --border rounded --border-foreground {{.PRIMARY}} --padding "1 2" --margin "0 2"
+            echo ""
+            gum style --foreground {{.WARNING}} "  Aucun commit depuis $LAST_TAG"
+            if ! gum confirm "Créer quand même un nouveau tag?"; then
+              exit 0
+            fi
+            echo ""
+          fi
         fi
+
+        # Afficher la box avec titre
+        echo ""
+        gum style --foreground {{.PRIMARY}} --bold " Création de Tag"
+        echo -e "$BOX_CONTENT" | gum style --border rounded --border-foreground {{.PRIMARY}} --padding "1 2" --margin "0 2"
         echo ""
 
-        # 6. Menu de choix
+        # Menu de choix
         CHOICE=$(gum choose \
           --cursor.foreground="{{.PRIMARY}}" \
-          " Utiliser $SUGGESTED_VERSION" \
+          " Utiliser v$SUGGESTED_VERSION" \
           " Modifier la version" \
           " Voir les commits depuis ${LAST_TAG:-le début}" \
           " Annuler")
 
         case "$CHOICE" in
           *"Utiliser"*)
-            FINAL_VERSION="$SUGGESTED_VERSION"
+            FINAL_VERSION="v$SUGGESTED_VERSION"
             ;;
           *"Modifier"*)
-            FINAL_VERSION=$(gum input \
-              --value "$SUGGESTED_VERSION" \
-              --placeholder "v1.0.0" \
-              --prompt "Version: ")
-            # Ajouter 'v' si manquant
-            [[ "$FINAL_VERSION" != v* ]] && FINAL_VERSION="v$FINAL_VERSION"
+            VERSION_INPUT=$(gum input --value "$SUGGESTED_VERSION" --placeholder "1.0.0" --prompt "Version : ")
+            [ -z "$VERSION_INPUT" ] && { gum style --foreground {{.MUTED}} " Annulé"; exit 0; }
+            FINAL_VERSION="v${VERSION_INPUT#v}"
             ;;
           *"Voir"*)
             echo ""
             gum style --foreground {{.PRIMARY}} "Commits depuis ${LAST_TAG:-le début}:"
             echo ""
             if [ -n "$LAST_TAG" ]; then
-              git log $LAST_TAG..HEAD --oneline | head -20
+              git log "$LAST_TAG..HEAD" --oneline | head -20
             else
               git log --oneline | head -20
             fi
             echo ""
-            # Relancer la commande
             exec task ai:git:tag
             ;;
           *)
@@ -1742,41 +1640,48 @@ tasks:
             ;;
         esac
 
-        # 7. Vérifier que le tag n'existe pas
+        # Valider le format
+        if ! echo "$FINAL_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+          gum style --foreground {{.ERROR}} " Format invalide: $FINAL_VERSION"
+          gum style --foreground {{.MUTED}} "   Format attendu: 1.0.0, 2.1.3, etc."
+          exit 1
+        fi
+
+        # Vérifier que le tag n'existe pas déjà
         if git rev-parse "$FINAL_VERSION" >/dev/null 2>&1; then
           gum style --foreground {{.ERROR}} " Le tag $FINAL_VERSION existe déjà!"
           exit 1
         fi
 
-        # 8. Message du tag (optionnel)
+        # Créer le tag
         echo ""
-        TAG_MSG=$(gum input \
-          --value "Release $FINAL_VERSION" \
-          --placeholder "Message du tag (optionnel)" \
-          --prompt "Message: ")
-
-        # 9. Créer le tag
-        echo ""
-        if [ -n "$TAG_MSG" ]; then
-          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-            "$ git tag -a $FINAL_VERSION -m \"$TAG_MSG\""
-          git tag -a "$FINAL_VERSION" -m "$TAG_MSG"
-        else
-          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-            "$ git tag $FINAL_VERSION"
-          git tag "$FINAL_VERSION"
-        fi
-
+        gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git tag -a $FINAL_VERSION -m \"Release $FINAL_VERSION\""
+        git tag -a "$FINAL_VERSION" -m "Release $FINAL_VERSION"
         gum style --foreground {{.SUCCESS}} " Tag $FINAL_VERSION créé!"
         echo ""
 
-        # 10. Proposer de pusher
-        if gum confirm "Pusher le tag sur origin?"; then
-          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 \
-            "$ git push origin $FINAL_VERSION"
-          git push origin "$FINAL_VERSION"
-          gum style --foreground {{.SUCCESS}} " Tag pushé sur origin"
-        else
-          gum style --foreground {{.MUTED}} "Tag créé localement. Pour pusher plus tard:"
-          gum style --foreground {{.MUTED}} "  git push origin $FINAL_VERSION"
+        # Push du tag
+        gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ git push origin $FINAL_VERSION"
+        git push origin "$FINAL_VERSION"
+        gum style --foreground {{.SUCCESS}} " Tag pushé sur origin"
+
+        # Créer une release GitHub si gh disponible
+        echo ""
+        if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+          gum style --foreground {{.PRIMARY}} "Création de la GitHub Release..."
+
+          # Récupérer les commits depuis le dernier tag
+          PREV_TAG=$(git describe --tags --abbrev=0 "$FINAL_VERSION^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            RELEASE_NOTES=$(git log "$PREV_TAG..$FINAL_VERSION" --pretty=format:"- %s" 2>/dev/null)
+          else
+            RELEASE_NOTES=$(git log --pretty=format:"- %s" -10 2>/dev/null)
+          fi
+
+          gum style --border rounded --border-foreground 240 --padding "0 1" --margin "0 2" --foreground 99 "$ gh release create $FINAL_VERSION --title \"$FINAL_VERSION\""
+          if gh release create "$FINAL_VERSION" --title "$FINAL_VERSION" --notes "$RELEASE_NOTES" 2>/dev/null; then
+            gum style --foreground {{.SUCCESS}} " Release $FINAL_VERSION créée!"
+          else
+            gum style --foreground {{.WARNING}} "  Release non créée (peut-être déjà existante)"
+          fi
         fi
