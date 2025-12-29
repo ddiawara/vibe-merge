@@ -1,9 +1,14 @@
 {
-  "name": "git-merge-wizard",
-  "displayName": "Git Merge Wizard",
+  "name": "vibe-merge",
+  "displayName": "VibeMerge",
   "description": "A powerful 3-way merge conflict resolver inspired by IntelliJ IDEA - Visual side-by-side merge editor with intuitive controls",
   "version": "0.1.0",
   "publisher": "your-name",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,57 +21,57 @@
     "merge",
     "conflict",
     "diff",
-    "3-way merge"
+    "3-way merge",
+    "vibe"
   ],
   "activationEvents": [
-    "onCommand:gitMergeWizard.openMergeEditor",
-    "onCommand:gitMergeWizard.resolveConflicts"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "gitMergeWizard.openMergeEditor",
+        "command": "vibeMerge.openMergeEditor",
         "title": "Open Merge Editor",
-        "category": "Git Merge Wizard",
+        "category": "VibeMerge",
         "icon": "$(git-merge)"
       },
       {
-        "command": "gitMergeWizard.resolveConflicts",
+        "command": "vibeMerge.resolveConflicts",
         "title": "Resolve All Conflicts",
-        "category": "Git Merge Wizard",
+        "category": "VibeMerge",
         "icon": "$(check-all)"
       },
       {
-        "command": "gitMergeWizard.acceptLeft",
+        "command": "vibeMerge.acceptLeft",
         "title": "Accept Current (Left)",
-        "category": "Git Merge Wizard",
+        "category": "VibeMerge",
         "icon": "$(arrow-right)"
       },
       {
-        "command": "gitMergeWizard.acceptRight",
+        "command": "vibeMerge.acceptRight",
         "title": "Accept Incoming (Right)",
-        "category": "Git Merge Wizard",
+        "category": "VibeMerge",
         "icon": "$(arrow-left)"
       },
       {
-        "command": "gitMergeWizard.acceptBoth",
+        "command": "vibeMerge.acceptBoth",
         "title": "Accept Both Changes",
-        "category": "Git Merge Wizard",
+        "category": "VibeMerge",
         "icon": "$(fold)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "gitMergeWizard.openMergeEditor",
-          "when": "gitMergeWizard.hasConflicts",
+          "command": "vibeMerge.openMergeEditor",
+          "when": "vibeMerge.hasConflicts",
           "group": "navigation"
         }
       ],
       "scm/resourceState/context": [
         {
-          "command": "gitMergeWizard.openMergeEditor",
+          "command": "vibeMerge.openMergeEditor",
           "when": "scmProvider == git",
           "group": "inline"
         }
@@ -74,42 +79,42 @@
     },
     "keybindings": [
       {
-        "command": "gitMergeWizard.openMergeEditor",
+        "command": "vibeMerge.openMergeEditor",
         "key": "ctrl+alt+m",
         "mac": "cmd+alt+m"
       },
       {
-        "command": "gitMergeWizard.acceptLeft",
+        "command": "vibeMerge.acceptLeft",
         "key": "ctrl+shift+left",
         "mac": "cmd+shift+left",
-        "when": "gitMergeWizard.editorActive"
+        "when": "vibeMerge.editorActive"
       },
       {
-        "command": "gitMergeWizard.acceptRight",
+        "command": "vibeMerge.acceptRight",
         "key": "ctrl+shift+right",
         "mac": "cmd+shift+right",
-        "when": "gitMergeWizard.editorActive"
+        "when": "vibeMerge.editorActive"
       }
     ],
     "configuration": {
-      "title": "Git Merge Wizard",
+      "title": "VibeMerge",
       "properties": {
-        "gitMergeWizard.autoApplyNonConflicting": {
+        "vibeMerge.autoApplyNonConflicting": {
           "type": "boolean",
           "default": true,
           "description": "Automatically apply non-conflicting changes"
         },
-        "gitMergeWizard.showLineNumbers": {
+        "vibeMerge.showLineNumbers": {
           "type": "boolean",
           "default": true,
           "description": "Show line numbers in the merge editor"
         },
-        "gitMergeWizard.highlightSyntax": {
+        "vibeMerge.highlightSyntax": {
           "type": "boolean",
           "default": true,
           "description": "Enable syntax highlighting in the merge editor"
         },
-        "gitMergeWizard.syncScroll": {
+        "vibeMerge.syncScroll": {
           "type": "boolean",
           "default": true,
           "description": "Synchronize scrolling between panels"

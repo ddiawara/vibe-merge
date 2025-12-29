@@ -1,4 +1,4 @@
-# Git Merge Wizard
+# VibeMerge
 
 Un éditeur de merge 3-way puissant pour VS Code, inspiré d'IntelliJ IDEA.
 
@@ -43,7 +43,7 @@ bunx @vscode/vsce package --allow-missing-repository
 
 ### Commandes disponibles
 
-Ouvre la palette de commandes (`Cmd+Shift+P`) et tape "Git Merge Wizard" :
+Ouvre la palette de commandes (`Cmd+Shift+P`) et tape "VibeMerge" :
 
 - **Open Merge Editor** : Ouvre l'éditeur de merge pour le fichier actuel
 - **Resolve All Conflicts** : Résout automatiquement tous les conflits
@@ -65,7 +65,7 @@ Ouvre la palette de commandes (`Cmd+Shift+P`) et tape "Git Merge Wizard" :
 
 ## Configuration
 
-Dans les paramètres VS Code (`Cmd+,`), recherche "Git Merge Wizard" :
+Dans les paramètres VS Code (`Cmd+,`), recherche "VibeMerge" :
 
 | Paramètre | Description | Défaut |
 |-----------|-------------|--------|

@@ -1,4 +1,4 @@
-// Example file with merge conflicts for testing Git Merge Wizard
+// Example file with merge conflicts for testing VibeMerge
 
 interface User {
     id: number;

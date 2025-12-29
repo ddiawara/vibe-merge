@@ -8,7 +8,7 @@ let conflictDetector: GitConflictDetector;
 let conflictDecorator: ConflictFileDecorator;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Git Merge Wizard is now active!');
+    console.log('VibeMerge is now active!');
 
     // Initialize providers
     mergeEditorProvider = new MergeEditorProvider(context);
@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register commands
     const openMergeEditor = vscode.commands.registerCommand(
-        'gitMergeWizard.openMergeEditor',
+        'vibeMerge.openMergeEditor',
         async (uri?: vscode.Uri) => {
             const fileUri = uri || vscode.window.activeTextEditor?.document.uri;
             if (!fileUri) {
@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const resolveConflicts = vscode.commands.registerCommand(
-        'gitMergeWizard.resolveConflicts',
+        'vibeMerge.resolveConflicts',
         async () => {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
@@ -60,17 +60,17 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const acceptLeft = vscode.commands.registerCommand(
-        'gitMergeWizard.acceptLeft',
+        'vibeMerge.acceptLeft',
         () => mergeEditorProvider.acceptChanges('left')
     );
 
     const acceptRight = vscode.commands.registerCommand(
-        'gitMergeWizard.acceptRight',
+        'vibeMerge.acceptRight',
         () => mergeEditorProvider.acceptChanges('right')
     );
 
     const acceptBoth = vscode.commands.registerCommand(
-        'gitMergeWizard.acceptBoth',
+        'vibeMerge.acceptBoth',
         () => mergeEditorProvider.acceptChanges('both')
     );
 
@@ -78,8 +78,44 @@ export function activate(context: vscode.ExtensionContext) {
     const watcher = vscode.workspace.createFileSystemWatcher('**/*');
     watcher.onDidChange(async (uri) => {
         const hasConflicts = await conflictDetector.hasConflictMarkers(uri.fsPath);
-        vscode.commands.executeCommand('setContext', 'gitMergeWizard.hasConflicts', hasConflicts);
+        vscode.commands.executeCommand('setContext', 'vibeMerge.hasConflicts', hasConflicts);
     });
+
+    // Check if document text contains conflict markers
+    const CONFLICT_MARKER_REGEX = /^<{7}\s/m;
+
+    const hasConflictMarkersInText = (text: string): boolean => {
+        return CONFLICT_MARKER_REGEX.test(text);
+    };
+
+    // Update context when active editor changes
+    const updateActiveEditorContext = () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor && editor.document.uri.scheme === 'file') {
+            const text = editor.document.getText();
+            const hasConflicts = hasConflictMarkersInText(text);
+            console.log('VibeMerge: Checking conflicts in', editor.document.fileName, '→', hasConflicts);
+            vscode.commands.executeCommand('setContext', 'vibeMerge.hasConflicts', hasConflicts);
+        } else {
+            vscode.commands.executeCommand('setContext', 'vibeMerge.hasConflicts', false);
+        }
+    };
+
+    // Listen for active editor changes
+    const editorChangeListener = vscode.window.onDidChangeActiveTextEditor(() => {
+        updateActiveEditorContext();
+    });
+
+    // Also check when document content changes (in case conflicts are added/removed)
+    const documentChangeListener = vscode.workspace.onDidChangeTextDocument((e) => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor && e.document === editor.document) {
+            updateActiveEditorContext();
+        }
+    });
+
+    // Check current editor on activation
+    updateActiveEditorContext();
 
     // Register decorations provider
     context.subscriptions.push(
@@ -94,6 +130,8 @@ export function activate(context: vscode.ExtensionContext) {
         acceptRight,
         acceptBoth,
         watcher,
+        editorChangeListener,
+        documentChangeListener,
         mergeEditorProvider
     );
 
@@ -106,7 +144,7 @@ async function detectInitialConflicts() {
     if (!workspaceFolders) return;
 
     const conflicts = await conflictDetector.detectConflicts(workspaceFolders[0].uri.fsPath);
-    vscode.commands.executeCommand('setContext', 'gitMergeWizard.hasConflicts', conflicts.length > 0);
+    vscode.commands.executeCommand('setContext', 'vibeMerge.hasConflicts', conflicts.length > 0);
 
     if (conflicts.length > 0) {
         const action = await vscode.window.showInformationMessage(
@@ -115,11 +153,11 @@ async function detectInitialConflicts() {
             'Later'
         );
         if (action === 'Resolve Now') {
-            vscode.commands.executeCommand('gitMergeWizard.resolveConflicts');
+            vscode.commands.executeCommand('vibeMerge.resolveConflicts');
         }
     }
 }
 
 export function deactivate() {
-    console.log('Git Merge Wizard is now deactivated');
+    console.log('VibeMerge is now deactivated');
 }

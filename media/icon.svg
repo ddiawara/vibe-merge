@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <!-- Main gradient: violet → cyan → rose -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+
+    <!-- Glow gradient for background -->
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#1a1a2e" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Secondary gradient for accents -->
+    <linearGradient id="accentGradient" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EC4899"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle with subtle glow -->
+  <circle cx="128" cy="128" r="120" fill="#1a1a2e"/>
+  <circle cx="128" cy="128" r="110" fill="url(#glowGradient)"/>
+
+  <!-- Outer ring -->
+  <circle cx="128" cy="128" r="108" stroke="url(#mainGradient)" stroke-width="4" fill="none" opacity="0.6"/>
+
+  <!-- Merge symbol - two branches converging -->
+  <!-- Left branch -->
+  <circle cx="70" cy="70" r="18" fill="url(#mainGradient)"/>
+  <path d="M70 88 L70 140 Q70 160 90 170 L128 190"
+        stroke="url(#mainGradient)" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+  <!-- Right branch -->
+  <circle cx="186" cy="70" r="18" fill="url(#accentGradient)"/>
+  <path d="M186 88 L186 140 Q186 160 166 170 L128 190"
+        stroke="url(#accentGradient)" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+  <!-- Merge point - larger circle with glow effect -->
+  <circle cx="128" cy="190" r="24" fill="url(#mainGradient)"/>
+  <circle cx="128" cy="190" r="16" fill="#1a1a2e"/>
+  <circle cx="128" cy="190" r="10" fill="url(#mainGradient)"/>
+
+  <!-- Sparkle accents for "vibe" effect -->
+  <circle cx="100" cy="120" r="4" fill="#06B6D4" opacity="0.8"/>
+  <circle cx="156" cy="120" r="4" fill="#EC4899" opacity="0.8"/>
+  <circle cx="128" cy="100" r="3" fill="#8B5CF6" opacity="0.6"/>
+</svg>

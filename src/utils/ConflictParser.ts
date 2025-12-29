@@ -3,10 +3,13 @@ export interface ConflictBlock {
     endLine: number;
     current: string;      // Content from current branch (between <<<<<<< and =======)
     incoming: string;     // Content from incoming branch (between ======= and >>>>>>>)
+    base?: string;        // Base content (diff3 style, between ||||||| and =======)
     currentLabel: string; // Label after <<<<<<< (e.g., HEAD)
     incomingLabel: string; // Label after >>>>>>> (e.g., feature-branch)
+    baseLabel?: string;   // Label after ||||||| (e.g., merged common ancestors)
     result: string;       // The resolved content
     resolved: boolean;
+    winner?: 'left' | 'right' | 'both'; // Which side won the conflict resolution
 }
 
 export interface ParsedConflict {
@@ -17,7 +20,8 @@ export interface ParsedConflict {
 
 export class ConflictParser {
     private readonly CONFLICT_START = /^<{7}\s*(.*)$/;
-    private readonly CONFLICT_SEPARATOR = /^={7}$/;
+    private readonly CONFLICT_BASE = /^\|{7}\s*(.*)$/;    // diff3 style base marker
+    private readonly CONFLICT_SEPARATOR = /^={7}\s*$/;
     private readonly CONFLICT_END = /^>{7}\s*(.*)$/;
 
     parse(content: string): ParsedConflict {
@@ -26,9 +30,10 @@ export class ConflictParser {
         const nonConflictingParts: { start: number; end: number; content: string }[] = [];
 
         let inConflict = false;
-        let inCurrentSection = false;
+        let section: 'current' | 'base' | 'incoming' = 'current';
         let currentConflict: Partial<ConflictBlock> = {};
         let currentLines: string[] = [];
+        let baseLines: string[] = [];
         let incomingLines: string[] = [];
         let lastNonConflictEnd = 0;
 
@@ -47,19 +52,28 @@ export class ConflictParser {
                 }
 
                 inConflict = true;
-                inCurrentSection = true;
+                section = 'current';
                 currentConflict = {
                     startLine: i,
-                    currentLabel: startMatch[1] || 'HEAD',
+                    currentLabel: startMatch[1]?.trim() || 'HEAD',
                     resolved: false
                 };
                 currentLines = [];
+                baseLines = [];
                 incomingLines = [];
                 continue;
             }
 
+            // diff3 style: ||||||| marks the base section
+            const baseMatch = line.match(this.CONFLICT_BASE);
+            if (inConflict && baseMatch) {
+                section = 'base';
+                currentConflict.baseLabel = baseMatch[1]?.trim() || 'base';
+                continue;
+            }
+
             if (inConflict && this.CONFLICT_SEPARATOR.test(line)) {
-                inCurrentSection = false;
+                section = 'incoming';
                 continue;
             }
 
@@ -68,8 +82,13 @@ export class ConflictParser {
                 currentConflict.endLine = i;
                 currentConflict.current = currentLines.join('\n');
                 currentConflict.incoming = incomingLines.join('\n');
-                currentConflict.incomingLabel = endMatch[1] || 'incoming';
+                currentConflict.incomingLabel = endMatch[1]?.trim() || 'incoming';
                 currentConflict.result = '';
+
+                // Add base if diff3 style was used
+                if (baseLines.length > 0) {
+                    currentConflict.base = baseLines.join('\n');
+                }
 
                 conflicts.push(currentConflict as ConflictBlock);
 
@@ -79,12 +98,23 @@ export class ConflictParser {
             }
 
             if (inConflict) {
-                if (inCurrentSection) {
-                    currentLines.push(line);
-                } else {
-                    incomingLines.push(line);
+                switch (section) {
+                    case 'current':
+                        currentLines.push(line);
+                        break;
+                    case 'base':
+                        baseLines.push(line);
+                        break;
+                    case 'incoming':
+                        incomingLines.push(line);
+                        break;
                 }
             }
+        }
+
+        // Warn about unclosed conflicts (missing >>>>>>> marker)
+        if (inConflict) {
+            console.warn(`VibeMerge: Unclosed conflict detected starting at line ${(currentConflict.startLine ?? 0) + 1}. Missing >>>>>>> marker.`);
         }
 
         // Add remaining non-conflicting content
@@ -119,9 +149,11 @@ export class ConflictParser {
 
             // Add the resolved content (or keep markers if unresolved)
             if (conflict.resolved && conflict.result !== undefined) {
-                if (conflict.result.trim() !== '') {
+                // Allow empty strings as valid resolutions (user may want to delete both sides)
+                if (conflict.result !== '') {
                     result.push(conflict.result);
                 }
+                // Empty string resolution = delete both sides, don't push anything
             } else {
                 // Keep original conflict markers
                 result.push(...lines.slice(conflict.startLine, conflict.endLine + 1));

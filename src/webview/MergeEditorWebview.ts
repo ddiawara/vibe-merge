@@ -153,6 +153,41 @@ export function getWebviewContent(
                 <span class="language-tag">${languageId}</span>
             </div>
         </footer>
+
+        <!-- Victory Celebration Overlay -->
+        <div class="victory-overlay" id="victoryOverlay">
+            <div class="victory-particles" id="victoryParticles"></div>
+            <div class="victory-content">
+                <div class="victory-glow"></div>
+                <div class="victory-badge">
+                    <div class="victory-ring"></div>
+                    <div class="victory-ring victory-ring-2"></div>
+                    <div class="victory-icon">✨</div>
+                </div>
+                <h1 class="victory-title">Fusion Réussie !</h1>
+                <p class="victory-subtitle">Tous les conflits ont été résolus avec brio</p>
+                <div class="victory-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="statConflicts">${parsed.conflicts.length}</span>
+                        <span class="stat-label">Conflits résolus</span>
+                    </div>
+                </div>
+                <div class="victory-cta">
+                    <button class="victory-save-btn" id="victorySaveBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Sauvegarder
+                    </button>
+                    <div class="victory-shortcut">
+                        <kbd>⌘</kbd><span>+</span><kbd>S</kbd>
+                    </div>
+                </div>
+                <button class="victory-dismiss" id="victoryDismiss">Continuer l'édition</button>
+            </div>
+        </div>
     </div>
     <script nonce="${nonce}">${script}</script>
 </body>
@@ -199,6 +234,20 @@ function getStyles(): string {
     --success-bg: hsla(142, 70%, 50%, 0.12);
     --danger-color: hsl(0, 70%, 60%);
     --danger-bg: hsla(0, 70%, 60%, 0.12);
+
+    /* IntelliJ-style conflict colors */
+    --conflict-color: hsl(0, 75%, 55%);
+    --conflict-bg: hsla(0, 75%, 55%, 0.15);
+    --conflict-border: hsla(0, 75%, 55%, 0.5);
+    --modified-color: hsl(210, 80%, 60%);
+    --modified-bg: hsla(210, 80%, 60%, 0.12);
+    --modified-border: hsla(210, 80%, 60%, 0.4);
+    --added-color: hsl(142, 70%, 50%);
+    --added-bg: hsla(142, 70%, 50%, 0.12);
+    --added-border: hsla(142, 70%, 50%, 0.4);
+    --deleted-color: hsl(0, 0%, 50%);
+    --deleted-bg: hsla(0, 0%, 50%, 0.1);
+    --deleted-border: hsla(0, 0%, 50%, 0.3);
     --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     --font-mono: var(--vscode-editor-font-family, 'SF Mono', 'Fira Code', monospace);
     --radius-sm: 4px;
@@ -323,6 +372,36 @@ body { font-family: var(--font-ui); font-size: 13px; color: var(--text-primary);
 .line:hover { background: rgba(255,255,255,0.03); }
 .line-number { min-width: 36px; padding-right: 12px; text-align: right; color: var(--text-muted); user-select: none; font-size: 11px; opacity: 0.5; }
 .line-content { flex: 1; white-space: pre; }
+
+/* IntelliJ-style line highlighting */
+.line.line-conflict { background: var(--conflict-bg); border-left: 3px solid var(--conflict-color); margin-left: -11px; padding-left: 8px; }
+.line.line-conflict:hover { background: hsla(0, 75%, 55%, 0.2); }
+.line.line-modified { background: var(--modified-bg); border-left: 3px solid var(--modified-color); margin-left: -11px; padding-left: 8px; }
+.line.line-modified:hover { background: hsla(210, 80%, 60%, 0.18); }
+.line.line-added { background: var(--added-bg); border-left: 3px solid var(--added-color); margin-left: -11px; padding-left: 8px; }
+.line.line-added:hover { background: hsla(142, 70%, 50%, 0.18); }
+.line.line-deleted { background: var(--deleted-bg); border-left: 3px solid var(--deleted-color); margin-left: -11px; padding-left: 8px; text-decoration: line-through; opacity: 0.6; }
+.line.line-deleted:hover { background: hsla(0, 0%, 50%, 0.15); }
+
+/* Word-level diff highlighting */
+.word-added { background: hsla(142, 70%, 50%, 0.25); border-radius: 2px; padding: 0 2px; }
+.word-deleted { background: hsla(0, 70%, 60%, 0.25); border-radius: 2px; padding: 0 2px; text-decoration: line-through; }
+.word-changed { background: hsla(210, 80%, 60%, 0.25); border-radius: 2px; padding: 0 2px; }
+
+/* Conflict block type indicators */
+.conflict-block.type-conflict .conflict-header { border-left: 3px solid var(--conflict-color); }
+.conflict-block.type-conflict .status-dot { background: var(--conflict-color) !important; }
+.conflict-block.type-modified .conflict-header { border-left: 3px solid var(--modified-color); }
+.conflict-block.type-modified .status-dot { background: var(--modified-color) !important; }
+.conflict-block.type-added .conflict-header { border-left: 3px solid var(--added-color); }
+.conflict-block.type-added .status-dot { background: var(--added-color) !important; }
+
+/* Gutter change indicators (IntelliJ style) */
+.gutter-indicator { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.gutter-indicator.gutter-conflict { background: var(--conflict-color); }
+.gutter-indicator.gutter-modified { background: var(--modified-color); }
+.gutter-indicator.gutter-added { background: var(--added-color); }
+.gutter-indicator.gutter-deleted { background: var(--deleted-color); }
 /* Transfer buttons on side panels - positioned at bottom of code blocks */
 .transfer-btn { position: absolute; bottom: 12px; display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: var(--radius-md); cursor: pointer; font-family: var(--font-ui); font-size: 11px; font-weight: 600; z-index: 10; transition: all var(--transition-fast); box-shadow: var(--shadow-md); text-transform: uppercase; letter-spacing: 0.03em; }
 .transfer-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
@@ -591,6 +670,257 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .token-regex { color: var(--syntax-regex); }
 .token-tag { color: var(--syntax-tag); }
 .token-attribute { color: var(--syntax-attribute); }
+
+/* ============================================
+   VICTORY CELEBRATION - Premium Experience
+   ============================================ */
+.victory-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 100%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+.victory-overlay.show {
+    display: flex;
+    animation: victoryFadeIn 0.5s ease-out forwards;
+}
+@keyframes victoryFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.victory-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.victory-content {
+    position: relative;
+    text-align: center;
+    padding: 60px 80px;
+    animation: victorySlideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+@keyframes victorySlideUp {
+    from { transform: translateY(60px) scale(0.9); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.victory-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 400px;
+    height: 400px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, hsla(var(--result-hue), 90%, 50%, 0.3) 0%, transparent 70%);
+    animation: victoryPulse 2s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes victoryPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+}
+
+.victory-badge {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 30px;
+}
+.victory-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid transparent;
+    border-top-color: var(--yours-color);
+    border-right-color: var(--result-color);
+    border-radius: 50%;
+    animation: victoryRingSpin 3s linear infinite;
+}
+.victory-ring-2 {
+    inset: 10px;
+    border-top-color: var(--theirs-color);
+    border-right-color: var(--success-color);
+    animation-direction: reverse;
+    animation-duration: 2s;
+}
+@keyframes victoryRingSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.victory-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 56px;
+    animation: victoryIconBounce 1s ease infinite;
+}
+@keyframes victoryIconBounce {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.victory-title {
+    font-size: 42px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--yours-color), var(--result-color), var(--theirs-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 60px hsla(var(--result-hue), 90%, 50%, 0.5);
+}
+
+.victory-subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0 0 30px;
+    opacity: 0.9;
+}
+
+.victory-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--success-color);
+    font-variant-numeric: tabular-nums;
+}
+.stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+.victory-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.victory-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 40px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    background: linear-gradient(135deg, var(--success-color), hsl(142, 60%, 40%));
+    border: none;
+    border-radius: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 20px hsla(142, 70%, 50%, 0.4), 0 0 0 0 hsla(142, 70%, 50%, 0.4);
+    animation: victorySavePulse 2s ease-in-out infinite;
+}
+.victory-save-btn svg {
+    width: 22px;
+    height: 22px;
+}
+.victory-save-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 30px hsla(142, 70%, 50%, 0.5), 0 0 0 4px hsla(142, 70%, 50%, 0.2);
+}
+.victory-save-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+@keyframes victorySavePulse {
+    0%, 100% { box-shadow: 0 4px 20px hsla(142, 70%, 50%, 0.4), 0 0 0 0 hsla(142, 70%, 50%, 0.4); }
+    50% { box-shadow: 0 4px 20px hsla(142, 70%, 50%, 0.4), 0 0 0 8px hsla(142, 70%, 50%, 0); }
+}
+
+.victory-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+.victory-shortcut kbd {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.victory-dismiss {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-family: var(--font-ui);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.victory-dismiss:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-primary);
+}
+
+/* Confetti particles */
+.confetti-particle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-20px) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg) scale(0.5);
+        opacity: 0;
+    }
+}
+
+/* Sparkle particles */
+.sparkle-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: sparkleFade 1.5s ease-out forwards;
+}
+@keyframes sparkleFade {
+    0% { transform: scale(0); opacity: 1; }
+    50% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0); opacity: 0; }
+}
 `;
 }
 
@@ -608,7 +938,6 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
     let currentConflictIndex = 0;
     let syncScroll = true;
     const ALIGN_POSITION = 100; // Target Y position for aligned headers (pixels from top of panel)
-    const ALIGN_POSITION_BOTTOM = -120; // Position from bottom for resolved blocks (negative = from bottom)
     const SCROLL_PADDING_TOP = 150; // Matches CSS spacer height
 
     const leftPanel = document.getElementById('leftContent');
@@ -757,6 +1086,12 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
             });
         });
 
+        // Reset scroll-spacer-bottom heights
+        panels.forEach(panel => {
+            const spacer = panel.querySelector('.scroll-spacer-bottom');
+            if (spacer) spacer.style.height = '200px';
+        });
+
         // Force reflow to get accurate measurements
         void leftPanel.offsetHeight;
 
@@ -782,7 +1117,28 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
             });
         }
 
-        console.log('Blocks aligned! Heights:', heightsByPanel.map(h => h.reduce((a,b) => a+b, 0)));
+        // Adjust scroll-spacer-bottom to allow the last block to be scrolled into view properly
+        // Find the TALLEST last block across all panels
+        const lastBlockHeights = blocksByPanel.map(blocks => {
+            const lastBlock = blocks[blocks.length - 1];
+            return lastBlock ? lastBlock.offsetHeight : 0;
+        });
+        const maxLastBlockHeight = Math.max(...lastBlockHeights);
+
+        // Calculate the needed spacer height based on the tallest last block
+        // This ensures the last block can be scrolled to ALIGN_POSITION from the top
+        const panelHeight = leftPanel.clientHeight;
+        const neededSpacerHeight = Math.max(200, panelHeight - ALIGN_POSITION);
+
+        // Apply the SAME spacer height to all panels to keep scroll in sync
+        panels.forEach(panel => {
+            const spacer = panel.querySelector('.scroll-spacer-bottom');
+            if (spacer) {
+                spacer.style.height = neededSpacerHeight + 'px';
+            }
+        });
+
+        console.log('Blocks aligned! MaxLastBlock:', maxLastBlockHeight, 'SpacerHeight:', neededSpacerHeight);
     }
 
     function updateActiveBlock() {
@@ -840,6 +1196,9 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
         }
     }
 
+    // Pending navigation after render
+    let pendingNavigateToIndex = -1;
+
     function renderPanels() {
         renderLeftPanel();
         renderRightPanel();
@@ -850,6 +1209,15 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
             requestAnimationFrame(() => {
                 alignBlocksAcrossPanels();
                 observeBlocks();
+                // If there's a pending navigation, execute it now after alignment is complete
+                if (pendingNavigateToIndex >= 0) {
+                    const indexToNavigate = pendingNavigateToIndex;
+                    pendingNavigateToIndex = -1;
+                    currentConflictIndex = indexToNavigate;
+                    scrollToConflict(indexToNavigate);
+                    updateNavigator();
+                    updateActiveBlock();
+                }
             });
         });
     }
@@ -914,12 +1282,28 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
 
     function renderSideBlock(c, i, side) {
         const content = side === 'left' ? c.current : c.incoming;
+        const otherContent = side === 'left' ? c.incoming : c.current;
         const label = side === 'left' ? c.currentLabel : c.incomingLabel;
         const lines = content.split('\\n');
+        const otherLines = otherContent.split('\\n');
         let linesHtml = '';
+
         lines.forEach((line, li) => {
-            const highlightedLine = highlightCode(line, languageId);
-            linesHtml += '<div class="line"><span class="line-number">' + (li + 1) + '</span><span class="line-content">' + highlightedLine + '</span></div>';
+            const otherLine = otherLines[li] || '';
+            // Use word-level diff when lines exist on both sides
+            const lineContent = (li < otherLines.length && line !== otherLine)
+                ? renderWordDiffHtml(line, otherLine, side)
+                : escapeHtml(line);
+
+            // Add line type class for IntelliJ-style coloring
+            let lineClass = 'line';
+            if (li >= otherLines.length) {
+                lineClass += side === 'left' ? ' line-deleted' : ' line-added';
+            } else if (line !== otherLine) {
+                lineClass += ' line-modified';
+            }
+
+            linesHtml += '<div class="' + lineClass + '"><span class="line-number">' + (li + 1) + '</span><span class="line-content">' + lineContent + '</span></div>';
         });
         const btnClass = side === 'left' ? 'use-left' : 'use-right';
         const btnLabel = side === 'left' ? 'Utiliser ' + icons.arrowRight : icons.arrowLeft + ' Utiliser';
@@ -996,42 +1380,36 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
         c.resolved = true;
         c.winner = side; // Track who won the duel: 'left', 'right', or 'both'
         vscode.postMessage({ command: 'acceptChange', conflictIndex: i, side: side });
-        renderPanels();
-        updateProgress();
 
         // If it was already resolved (re-resolution), just update without scrolling away
         if (wasResolved) {
-            currentConflictIndex = i;
-            updateActiveBlock();
-            updateNavigator();
+            pendingNavigateToIndex = i; // Stay on current after re-render
+            renderPanels();
+            updateProgress();
             return;
         }
 
-        // Find the next unresolved conflict
-        const next = conflicts.findIndex((x, j) => j > i && !x.resolved);
+        // Find the next unresolved conflict (search forward first, then from beginning)
+        let nextUnresolved = conflicts.findIndex((x, j) => j > i && !x.resolved);
 
-        // First scroll the resolved block to bottom, then move to next
-        scrollToBottom(i, () => {
-            if (next !== -1) {
-                // Move to next unresolved conflict after animation
-                setTimeout(() => {
-                    currentConflictIndex = next;
-                    scrollToConflict(next);
-                    updateNavigator();
-                }, 300);
-            } else {
-                // No more conflicts - check if there are any unresolved before current
-                const prevUnresolved = conflicts.findIndex((x) => !x.resolved);
-                if (prevUnresolved !== -1) {
-                    setTimeout(() => {
-                        currentConflictIndex = prevUnresolved;
-                        scrollToConflict(prevUnresolved);
-                        updateNavigator();
-                    }, 300);
-                }
-            }
-        });
-        updateNavigator();
+        // If no unresolved after current, search from the beginning
+        if (nextUnresolved === -1) {
+            nextUnresolved = conflicts.findIndex(x => !x.resolved);
+        }
+
+        // Set pending navigation - will be executed AFTER alignment completes
+        if (nextUnresolved !== -1) {
+            pendingNavigateToIndex = nextUnresolved;
+        } else {
+            // All conflicts resolved - stay on current
+            pendingNavigateToIndex = i;
+        }
+
+        renderPanels();
+        updateProgress();
+
+        // Check if all conflicts are resolved - trigger victory!
+        checkVictory();
     }
 
     function updateNavigator() {
@@ -1058,13 +1436,18 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
         // Add moving class for animation
         syncIndicator.classList.add('moving');
 
-        // Since blocks are aligned via spacers, we can use any panel as reference
-        // All panels will scroll to the same position
-        const referenceBlock = centerPanel.querySelectorAll('.conflict-block')[i];
-        if (referenceBlock) {
-            const scrollTarget = referenceBlock.offsetTop - ALIGN_POSITION;
-            const panels = [leftPanel, centerPanel, rightPanel];
-            panels.forEach(panel => {
+        // Get the scroll target from ALL panels and use the center panel as reference
+        // Since blocks are aligned via spacers, all should have the same offsetTop
+        const panels = [leftPanel, centerPanel, rightPanel];
+        const blocks = panels.map(panel => panel.querySelectorAll('.conflict-block')[i]);
+
+        // Verify blocks exist
+        if (blocks[1]) { // Use center panel as reference
+            const scrollTarget = blocks[1].offsetTop - ALIGN_POSITION;
+
+            // Scroll ALL panels to exactly the same position
+            panels.forEach((panel, idx) => {
+                // Disable scroll sync temporarily to prevent interference
                 panel.scrollTo({
                     top: Math.max(0, scrollTarget),
                     behavior: 'smooth'
@@ -1079,40 +1462,17 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
             updateSyncIndicator();
             syncIndicator.classList.remove('moving');
             isScrolling = false;
-        }, 450);
-    }
 
-    // Scroll resolved block to bottom of panel
-    function scrollToBottom(i, callback) {
-        isScrolling = true;
-        syncIndicator.classList.add('moving');
-
-        const panelHeight = leftPanel.clientHeight;
-        const referenceBlock = centerPanel.querySelectorAll('.conflict-block')[i];
-
-        if (referenceBlock) {
-            const blockHeight = referenceBlock.offsetHeight;
-            // Scroll so the block's bottom is near the panel's bottom
-            const scrollTarget = referenceBlock.offsetTop - panelHeight + blockHeight + 50;
-
-            const panels = [leftPanel, centerPanel, rightPanel];
+            // Force sync all panels to the same position after animation
+            const finalScrollTop = centerPanel.scrollTop;
             panels.forEach(panel => {
-                panel.scrollTo({
-                    top: Math.max(0, scrollTarget),
-                    behavior: 'smooth'
-                });
+                if (panel.scrollTop !== finalScrollTop) {
+                    panel.scrollTop = finalScrollTop;
+                }
             });
-        }
-
-        // Move sync indicator to bottom
-        syncIndicator.style.top = (panelHeight - 50) + 'px';
-
-        setTimeout(() => {
-            syncIndicator.classList.remove('moving');
-            isScrolling = false;
-            if (callback) callback();
         }, 500);
     }
+
 
     // Click handler for conflict blocks - scroll all panels to show clicked block
     function attachBlockClickHandlers() {
@@ -1154,11 +1514,231 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
         return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
+    // ========== WORD-LEVEL DIFF (IntelliJ style) ==========
+    function tokenizeWords(text) {
+        // Split into words and whitespace, keeping both
+        return text.split(/(\\s+)/).filter(token => token.length > 0);
+    }
+
+    function computeWordDiff(oldText, newText) {
+        const oldWords = tokenizeWords(oldText);
+        const newWords = tokenizeWords(newText);
+
+        // Simple LCS-based diff
+        const m = oldWords.length;
+        const n = newWords.length;
+
+        // Create DP table
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (oldWords[i - 1] === newWords[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
+        // Backtrack to find LCS
+        const lcs = [];
+        let i = m, j = n;
+        while (i > 0 && j > 0) {
+            if (oldWords[i - 1] === newWords[j - 1]) {
+                lcs.unshift(oldWords[i - 1]);
+                i--; j--;
+            } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                i--;
+            } else {
+                j--;
+            }
+        }
+
+        // Build diff result
+        const result = [];
+        let oldIndex = 0, newIndex = 0, lcsIndex = 0;
+
+        while (oldIndex < oldWords.length || newIndex < newWords.length) {
+            const oldMatchesLCS = lcsIndex < lcs.length && oldIndex < oldWords.length && oldWords[oldIndex] === lcs[lcsIndex];
+            const newMatchesLCS = lcsIndex < lcs.length && newIndex < newWords.length && newWords[newIndex] === lcs[lcsIndex];
+
+            if (oldMatchesLCS && newMatchesLCS) {
+                result.push({ type: 'equal', value: oldWords[oldIndex] });
+                oldIndex++; newIndex++; lcsIndex++;
+            } else if (!oldMatchesLCS && oldIndex < oldWords.length) {
+                result.push({ type: 'deleted', value: oldWords[oldIndex] });
+                oldIndex++;
+            } else if (!newMatchesLCS && newIndex < newWords.length) {
+                result.push({ type: 'added', value: newWords[newIndex] });
+                newIndex++;
+            }
+        }
+        return result;
+    }
+
+    function renderWordDiffHtml(text, otherText, side) {
+        // If texts are identical, just escape and return
+        if (text === otherText) {
+            return escapeHtml(text);
+        }
+
+        const diffs = side === 'left'
+            ? computeWordDiff(text, otherText)  // left = old, highlight deletions
+            : computeWordDiff(otherText, text); // right = new, highlight additions
+
+        return diffs.map(diff => {
+            const escaped = escapeHtml(diff.value);
+            if (side === 'left') {
+                // Left side: show deletions (things removed from left that are in right)
+                if (diff.type === 'deleted') {
+                    return '<span class="word-deleted">' + escaped + '</span>';
+                }
+            } else {
+                // Right side: show additions (things added in right that weren't in left)
+                if (diff.type === 'added') {
+                    return '<span class="word-added">' + escaped + '</span>';
+                }
+            }
+            return escaped;
+        }).join('');
+    }
+
     prevBtn.addEventListener('click', () => { if (currentConflictIndex > 0) { currentConflictIndex--; scrollToConflict(currentConflictIndex); updateNavigator(); } });
     nextBtn.addEventListener('click', () => { if (currentConflictIndex < conflicts.length - 1) { currentConflictIndex++; scrollToConflict(currentConflictIndex); updateNavigator(); } });
     saveBtn.addEventListener('click', () => { vscode.postMessage({ command: 'save', content: getResult() }); });
     cancelBtn.addEventListener('click', () => { vscode.postMessage({ command: 'cancel' }); });
     acceptAllBtn.addEventListener('click', () => { vscode.postMessage({ command: 'acceptAllNonConflicting' }); });
+
+    // ============================================
+    // VICTORY CELEBRATION SYSTEM
+    // ============================================
+    const victoryOverlay = document.getElementById('victoryOverlay');
+    const victorySaveBtn = document.getElementById('victorySaveBtn');
+    const victoryDismiss = document.getElementById('victoryDismiss');
+    const victoryParticles = document.getElementById('victoryParticles');
+    let victoryShown = false;
+
+    function showVictory() {
+        if (victoryShown) return;
+        victoryShown = true;
+
+        // Show overlay
+        victoryOverlay.classList.add('show');
+
+        // Create confetti explosion
+        createConfetti();
+
+        // Create sparkles
+        createSparkles();
+    }
+
+    function hideVictory() {
+        victoryOverlay.classList.remove('show');
+        // Clear particles after animation
+        setTimeout(() => {
+            victoryParticles.innerHTML = '';
+        }, 500);
+    }
+
+    function createConfetti() {
+        const colors = [
+            'hsl(168, 70%, 50%)',  // yours
+            'hsl(45, 90%, 60%)',   // result
+            'hsl(270, 70%, 65%)',  // theirs
+            'hsl(142, 70%, 50%)',  // success
+            '#ec4899',             // pink
+            '#3b82f6',             // blue
+            '#f59e0b'              // amber
+        ];
+        const shapes = ['square', 'circle', 'triangle'];
+
+        for (let i = 0; i < 80; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'confetti-particle';
+
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const shape = shapes[Math.floor(Math.random() * shapes.length)];
+            const size = Math.random() * 12 + 6;
+            const startX = Math.random() * 100;
+            const drift = (Math.random() - 0.5) * 200;
+            const duration = Math.random() * 2 + 2;
+            const delay = Math.random() * 0.5;
+
+            particle.style.cssText = \`
+                left: \${startX}%;
+                top: -20px;
+                width: \${size}px;
+                height: \${size}px;
+                background: \${color};
+                animation-duration: \${duration}s;
+                animation-delay: \${delay}s;
+                --drift: \${drift}px;
+            \`;
+
+            if (shape === 'circle') {
+                particle.style.borderRadius = '50%';
+            } else if (shape === 'triangle') {
+                particle.style.background = 'transparent';
+                particle.style.borderLeft = \`\${size/2}px solid transparent\`;
+                particle.style.borderRight = \`\${size/2}px solid transparent\`;
+                particle.style.borderBottom = \`\${size}px solid \${color}\`;
+            }
+
+            victoryParticles.appendChild(particle);
+        }
+    }
+
+    function createSparkles() {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        for (let i = 0; i < 30; i++) {
+            setTimeout(() => {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle-particle';
+
+                const angle = (Math.PI * 2 * i) / 30 + Math.random() * 0.5;
+                const distance = 100 + Math.random() * 150;
+                const x = centerX + Math.cos(angle) * distance;
+                const y = centerY + Math.sin(angle) * distance - 50;
+
+                sparkle.style.cssText = \`
+                    left: \${x}px;
+                    top: \${y}px;
+                    animation-delay: \${Math.random() * 0.3}s;
+                \`;
+
+                victoryParticles.appendChild(sparkle);
+            }, i * 30);
+        }
+    }
+
+    // Victory button handlers
+    victorySaveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideVictory();
+        saveBtn.click();
+    });
+
+    victoryDismiss.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideVictory();
+    });
+
+    // Click outside to dismiss
+    victoryOverlay.addEventListener('click', (e) => {
+        if (e.target === victoryOverlay) {
+            hideVictory();
+        }
+    });
+
+    // Check victory condition
+    function checkVictory() {
+        if (conflicts.every(c => c.resolved) && !victoryShown) {
+            setTimeout(showVictory, 400);
+        }
+    }
 
     // Simple ratio-based scroll sync - since blocks are now aligned via spacers,
     // all panels have equal total heights, so we just sync scroll positions directly
@@ -1237,8 +1817,19 @@ function getScript(parsed: ParsedConflict, languageId: string): string {
 
     window.addEventListener('message', event => {
         const m = event.data;
-        if (m.command === 'conflictResolved') { conflicts[m.conflictIndex].result = m.result; conflicts[m.conflictIndex].resolved = true; renderPanels(); updateProgress(); }
-        else if (m.command === 'bulkUpdate') { conflicts = m.conflicts; renderPanels(); updateProgress(); }
+        if (m.command === 'conflictResolved') {
+            conflicts[m.conflictIndex].result = m.result;
+            conflicts[m.conflictIndex].resolved = true;
+            renderPanels();
+            updateProgress();
+            checkVictory();
+        }
+        else if (m.command === 'bulkUpdate') {
+            conflicts = m.conflicts;
+            renderPanels();
+            updateProgress();
+            checkVictory();
+        }
         else if (m.command === 'acceptCurrentConflict') { acceptChange(currentConflictIndex, m.side); }
     });
 

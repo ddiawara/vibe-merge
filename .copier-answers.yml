@@ -6,7 +6,7 @@ domain: git-merge-editor.local
 language: fr
 preset: base
 project_description: Projet automatisé avec Taskfile et UI terminal
-project_name: Git Merge Editor
+project_name: VibeMerge
 project_slug: git-merge-editor
 project_version: 0.1.0
 ui_color_scheme: default

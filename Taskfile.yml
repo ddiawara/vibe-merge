@@ -14,7 +14,7 @@ version: '3'
 # ============================================================================
 vars:
   # === PROJET ===
-  PROJECT_NAME: "Git Merge Editor"
+  PROJECT_NAME: "VibeMerge"
   PROJECT_VERSION: "0.1.0"
   DOMAIN: "git-merge-editor.local"
 

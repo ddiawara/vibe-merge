@@ -13,7 +13,7 @@
   2. Appuyer sur F5 pour lancer l'extension en mode développement
   3. Dans la nouvelle fenêtre VS Code qui s'ouvre :
     - Ouvrir le fichier test-conflict.ts
-    - Cmd+Shift+P → taper "Git Merge Wizard: Open Merge Editor"
+    - Cmd+Shift+P → taper "VibeMerge: Open Merge Editor"
 
   Ou utiliser le raccourci : Cmd+Alt+M
 
