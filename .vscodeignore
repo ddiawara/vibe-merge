@@ -1,24 +1,46 @@
+# VS Code / Development
 .vscode/**
 .vscode-test/**
 .claude/**
 .flox/**
 .git/**
 .gitignore
+.envrc
+
+# Source files (compiled to out/)
 src/**
 **/*.ts
 **/*.map
+
+# Config files
 .eslintrc.json
 tsconfig.json
 bun.lock
 package-lock.json
-node_modules/**
-!node_modules/diff/**
+.copier-answers.yml
 Taskfile.yml
 taskfiles/**
-prompts/**
-scripts/**
+
+# Test / Dev files
 test-*.ts
 todo.md
+prompts/**
+scripts/**
+conflit_taskfile.yaml
+copie.conflit_taskfile.yaml
+copie.conflit_taskfile.yaml.fixed
+CLAUDE.md
+demo/**
+media/screenshots/GUIDE.md
+
+# Video files (keep only optimized GIF)
+media/demo/*.mov
+media/demo/*.mp4
+media/demo/demo.gif
+
+# Build artifacts
 *.vsix
-.copier-answers.yml
-.envrc
+
+# Dependencies (keep only diff)
+node_modules/**
+!node_modules/diff/**

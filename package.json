@@ -1,9 +1,9 @@
 {
   "name": "vibe-merge",
   "displayName": "VibeMerge",
-  "description": "A powerful 3-way merge conflict resolver inspired by IntelliJ IDEA - Visual side-by-side merge editor with intuitive controls",
+  "description": "Epic 3-way merge editor with Duel System - Resolve git conflicts like a champion! Inspired by IntelliJ IDEA with victory celebrations and score tracking.",
   "version": "0.1.0",
-  "publisher": "your-name",
+  "publisher": "d3nai",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#1a1a2e",
@@ -22,8 +22,16 @@
     "conflict",
     "diff",
     "3-way merge",
-    "vibe"
+    "vibe",
+    "duel",
+    "intellij",
+    "resolver",
+    "gamification"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d3nai/vibe-merge"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
