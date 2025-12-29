@@ -2,8 +2,8 @@
   "name": "vibe-merge",
   "displayName": "VibeMerge - Git Merge Conflict Resolver, 3-Way Diff Editor",
   "description": "The best Git merge conflict resolver for VS Code. 3-way diff editor inspired by IntelliJ IDEA. Resolve merge conflicts with epic duel animations, score tracking, and victory celebrations. Transform painful merges into satisfying wins!",
-  "version": "0.1.0",
-  "publisher": "d3nai",
+  "version": "1.0.0",
+  "publisher": "ddiawara",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#1a1a2e",
@@ -25,7 +25,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/d3nai/vibe-merge"
+    "url": "https://github.com/ddiawara/vibe-merge"
   },
   "activationEvents": [
     "onStartupFinished"

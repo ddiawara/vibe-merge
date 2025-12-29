@@ -2,9 +2,9 @@
 
 > Transform merge conflicts into epic duels! The best 3-way diff editor for VS Code, inspired by IntelliJ IDEA.
 
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
-[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=10b981)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
-[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/d3nai.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=f59e0b)](https://marketplace.visualstudio.com/items?itemName=d3nai.vibe-merge)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/ddiawara.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=ddiawara.vibe-merge)
+[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/ddiawara.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=10b981)](https://marketplace.visualstudio.com/items?itemName=ddiawara.vibe-merge)
+[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/ddiawara.vibe-merge?style=for-the-badge&logo=visual-studio-code&color=f59e0b)](https://marketplace.visualstudio.com/items?itemName=ddiawara.vibe-merge)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](LICENSE)
 
 ---
@@ -95,7 +95,7 @@ When all conflicts are resolved:
 
 ### Option 2: From VSIX file
 
-1. Download `vibe-merge-x.x.x.vsix` from [Releases](https://github.com/d3nai/vibe-merge/releases)
+1. Download `vibe-merge-x.x.x.vsix` from [Releases](https://github.com/ddiawara/vibe-merge/releases)
 2. In VS Code, open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
 3. Type **"Extensions: Install from VSIX..."**
 4. Select the downloaded `.vsix` file
@@ -104,7 +104,7 @@ When all conflicts are resolved:
 ### Option 3: Build from source
 
 ```bash
-git clone https://github.com/d3nai/vibe-merge.git
+git clone https://github.com/ddiawara/vibe-merge.git
 cd vibe-merge
 bun install
 bun run compile
@@ -141,20 +141,15 @@ Open the Command Palette (`Cmd+Shift+P`) and type "VibeMerge":
 
 ### Typical Workflow
 
-```
-1. 🔀 You have a git conflict after merge/rebase
-2. 📂 Open the conflicted file
-3. ⌨️  Press Cmd+Alt+M to open VibeMerge
-4. 👀 You'll see 3 panels:
-   ┌─────────────┬─────────────┬─────────────┐
-   │   CURRENT   │   RESULT    │  INCOMING   │
-   │   (Yours)   │  (Preview)  │  (Theirs)   │
-   │     🛡️      │     📝      │     ⚔️      │
-   └─────────────┴─────────────┴─────────────┘
-5. 🎮 Resolve each conflict - Enjoy the duel animations!
-6. 🎉 All resolved? Automatic celebration!
-7. 💾 Save with Cmd+S
-```
+| Step | Action |
+|:----:|--------|
+| 1 | 🔀 Git conflict after merge/rebase |
+| 2 | 📂 Open the conflicted file |
+| 3 | ⌨️ Press `Cmd+Alt+M` to open VibeMerge |
+| 4 | 👀 View 3 panels: **CURRENT** 🛡️ \| **RESULT** 📝 \| **INCOMING** ⚔️ |
+| 5 | 🎮 Resolve each conflict with duel animations |
+| 6 | 🎉 All resolved? Victory celebration! |
+| 7 | 💾 Save with `Cmd+S` |
 
 ---
 
@@ -218,7 +213,7 @@ bunx @vscode/vsce package --allow-missing-repository
 
 ## 📜 Changelog
 
-### v0.1.0 (Initial Release)
+### v1.0.0 (Initial Release)
 - 3-way editor with synchronized scrolling
 - Git conflict parsing (standard and diff3)
 - Duel System with animations (Defense/Victory/Alliance)
@@ -232,7 +227,7 @@ bunx @vscode/vsce package --allow-missing-repository
 
 ## 📄 License
 
-MIT © 2024 d3nai
+MIT © 2025 d3n
 
 ---
 
