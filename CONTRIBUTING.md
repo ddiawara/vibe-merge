@@ -85,3 +85,4 @@ bunx @vscode/vsce package --allow-missing-repository
 - `prompts/` - AI prompts templates
 - `scripts/` - Private utility scripts
 - `test-conflict*` - Test conflict files
+- `todo.md` - Internal todo notes
